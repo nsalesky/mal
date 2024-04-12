@@ -1,5 +1,8 @@
 use thiserror::Error;
 
+mod printer;
+mod reader;
+
 #[derive(Error, Debug)]
 pub enum ParseError {
 
@@ -11,5 +14,5 @@ pub enum RuntimeError {
 }
 
 pub fn rep(input: &str) -> Result<String, RuntimeError> {
-    Ok("hello".to_string())
+    Ok(input.to_string())
 }

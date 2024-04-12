@@ -1,6 +1,6 @@
 use std::io;
 use std::io::Write;
-use nick_lisp::rep;
+use nlisp::rep;
 
 fn main() -> Result<(), io::Error> {
     loop {

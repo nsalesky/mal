@@ -9,7 +9,7 @@ dist: mal
 mal: stepA_mal
 	cp $< $@
 
-%: %.rs
+%: src/%.rs
 	cargo build --release --bin $*
 	cp target/release/$* $@
 
