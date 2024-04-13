@@ -11,6 +11,18 @@ impl Display for Expr {
             Expr::Symbol(val) => {
                 write!(f, "{}", val)
             }
+            Expr::String(val) => {
+                write!(f, "\"{}\"", val)
+            }
+            Expr::Nil => {
+                write!(f, "nil")
+            }
+            Expr::True => {
+                write!(f, "#t")
+            }
+            Expr::False => {
+                write!(f, "#f")
+            }
             Expr::List(elements) => {
                 write!(f, "(")?;
                 for (i, elem) in elements.into_iter().enumerate() {
@@ -20,6 +32,9 @@ impl Display for Expr {
                     }
                 }
                 write!(f, ")")
+            }
+            Expr::Quote(expr) => {
+                write!(f, "(quote {})", expr)
             }
         }
     }
@@ -44,6 +59,19 @@ mod tests {
     }
 
     #[test]
+    fn test_display_string() {
+        assert_eq!("\"hello world\"", Expr::String("hello world".to_string()).to_string());
+        assert_eq!("\"foo\nbar\"", Expr::String("foo\nbar".to_string()).to_string());
+    }
+
+    #[test]
+    fn test_display_identifiers() {
+        assert_eq!("nil", Expr::Nil.to_string());
+        assert_eq!("#t", Expr::True.to_string());
+        assert_eq!("#f", Expr::False.to_string());
+    }
+
+    #[test]
     fn test_display_list() {
         assert_eq!("(1)", Expr::List(LinkedList::from([Expr::Integer(1)])).to_string());
 
@@ -65,5 +93,18 @@ mod tests {
             ])),
             Expr::Integer(2)
         ])).to_string());
+    }
+
+    #[test]
+    fn test_display_quote() {
+        assert_eq!("(quote a)", Expr::Quote(Box::new(Expr::Symbol("a".to_string()))).to_string());
+        assert_eq!("(quote 123)", Expr::Quote(Box::new(Expr::Integer(123))).to_string());
+
+        let list_expr = Expr::List(LinkedList::from([
+            Expr::Symbol("a".to_string()),
+            Expr::Integer(1),
+            Expr::True
+        ]));
+        assert_eq!("(quote (a 1 #t))", Expr::Quote(Box::new(list_expr)).to_string());
     }
 }
