@@ -1,18 +1,19 @@
 use thiserror::Error;
 
+use crate::parser::{parse_string, ParseError};
+
+mod types;
+mod parser;
 mod printer;
-mod reader;
-
-#[derive(Error, Debug)]
-pub enum ParseError {
-
-}
 
 #[derive(Error, Debug)]
 pub enum RuntimeError {
-
+    #[error("parse error: {0}")]
+    ParseError(#[from] ParseError)
 }
 
 pub fn rep(input: &str) -> Result<String, RuntimeError> {
-    Ok(input.to_string())
+    let expr = parse_string(input)?;
+
+    Ok(expr.to_string())
 }
