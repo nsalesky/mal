@@ -16,8 +16,8 @@ pub enum ParseError {
     #[error("invalid integer")]
     IntegerParseError(#[from] ParseIntError),
 
-    #[error("parentheses were unbalanced in expression: `{0}`")]
-    UnbalancedParens(String),
+    #[error("parentheses were unbalanced in expression")]
+    UnbalancedParens,
 
     #[error("integer contained a non-numeric character: `{0}`")]
     IntegerContainsNonNumericChar(char),
@@ -108,13 +108,7 @@ fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                         inner_text.push(c);
                     }
                 }
-                _ => {
-                    let mut unfinished_text = "(".to_string();
-                    unfinished_text.push_str(inner_text.as_str());
-                    unfinished_text.push(c);
-                    unfinished_text.push(' ');
-                    return Err(ParseError::UnbalancedParens(unfinished_text));
-                }
+                _ => return Err(ParseError::UnbalancedParens),
             }
             '(' => {
                 bracket_stack.push_front(c);
@@ -129,10 +123,7 @@ fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     }
 
     if !bracket_stack.is_empty() {
-        let mut unfinished_text = "(".to_string();
-        unfinished_text.push_str(inner_text.as_str());
-        unfinished_text.push(' ');
-        return Err(ParseError::UnbalancedParens(unfinished_text));
+        return Err(ParseError::UnbalancedParens);
     }
 
     let mut expr_elements = LinkedList::new();
@@ -267,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_parse_list_unbalance() {
-        assert_eq!(Err(ParseError::UnbalancedParens("(+ 1 2 ".to_string())),
+        assert_eq!(Err(ParseError::UnbalancedParens),
                    parse_text_to_expression("(+ 1 2"));
     }
 
