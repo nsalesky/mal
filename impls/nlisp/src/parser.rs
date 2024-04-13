@@ -19,8 +19,8 @@ pub enum ParseError {
     #[error("parentheses were unbalanced")]
     UnbalancedParens,
 
-    #[error("integer contained a non-numeric character")]
-    IntegerContainsNonNumericChar,
+    #[error("integer contained a non-numeric character: `{0}`")]
+    IntegerContainsNonNumericChar(char),
 
     #[error("the input string was invalid: {0}")]
     InvalidExpr(String),
@@ -37,13 +37,26 @@ fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
             Some(c) => match c {
                 '(' => return parse_list(chars),
                 c if c.is_digit(10) => return parse_integer(chars),
-                ' ' => { chars.next(); }
+                c if c.is_whitespace() => { chars.next(); }
                 ')' => return Err(ParseError::UnbalancedParens),
+                ';' => consume_comment(chars)?,
                 _ => return parse_symbol(chars)
             },
             None => return Err(EmptyExpr)
         }
     }
+}
+
+fn consume_comment(chars: &mut Peekable<Chars>) -> Result<(), ParseError> {
+    while let Some(c) = chars.peek() {
+        if *c == '\n' {
+            chars.next();
+            break;
+        } else {
+            chars.next();
+        }
+    }
+    Ok(())
 }
 
 fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
@@ -71,8 +84,16 @@ fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                 bracket_stack.push_front(c);
                 inner_text.push(c);
             }
+            ';' => {
+                consume_comment(chars)?;
+                inner_text.push(' ');
+            }
             _ => { inner_text.push(c) }
         }
+    }
+
+    if !bracket_stack.is_empty() {
+        return Err(ParseError::UnbalancedParens);
     }
 
     let mut expr_elements = LinkedList::new();
@@ -94,6 +115,7 @@ fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 
     while let Some(c) = chars.next() {
         match c {
+            ';' => consume_comment(chars)?,
             _ if c.is_whitespace() => break,
             c => { symbol_str.push(c) }
         }
@@ -105,11 +127,18 @@ fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 fn parse_integer(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     let mut integer_str = String::new();
 
-    while let Some(c) = chars.next() {
+    while let Some(c) = chars.peek() {
         match c {
-            c if c.is_digit(10) => { integer_str.push(c); }
-            c if c.is_whitespace() => break,
-            _ => return Err(ParseError::IntegerContainsNonNumericChar),
+            c if c.is_digit(10) => {
+                integer_str.push(*c);
+                chars.next();
+            }
+            c if c.is_whitespace() => {
+                chars.next();
+                break;
+            }
+            ';' => break,
+            _ => return Err(ParseError::IntegerContainsNonNumericChar(*c)),
         }
     }
 
@@ -145,8 +174,7 @@ mod tests {
 
     #[test]
     fn test_parse_integer_invalid() {
-        assert_eq!(Err(ParseError::IntegerContainsNonNumericChar), parse_string("1a"));
-        assert_eq!(Err(ParseError::IntegerContainsNonNumericChar), parse_string("12;"));
+        assert_eq!(Err(ParseError::IntegerContainsNonNumericChar('a')), parse_string("1a"));
     }
 
     #[test]
@@ -161,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_parse_list_unbalance() {
-        assert_eq!(Err(ParseError::UnbalancedParens), parse_string("(+ 1 2))"));
+        assert_eq!(Err(ParseError::UnbalancedParens), parse_string("(+ 1 2"));
     }
 
     #[test]
@@ -176,5 +204,22 @@ mod tests {
             ]))
         ]));
         assert_eq!(Ok(expected_expr), parse_string("(  + 2   (*  3  4)  )  "))
+    }
+
+    #[test]
+    fn test_parse_comment() {
+        assert_eq!(Ok(Expr::Integer(8)), parse_string(" 8;      \n"));
+
+        let expected_expr = Expr::List(LinkedList::from([
+            Expr::Symbol("-".to_owned()),
+            Expr::Integer(3),
+            Expr::Integer(1)
+        ]));
+        assert_eq!(Ok(expected_expr), parse_string("(- 3;\n1)"));
+    }
+
+    #[test]
+    fn test_parse_newlines() {
+        assert_eq!(Ok(Expr::Integer(1)), parse_string("\n1\n\n"));
     }
 }

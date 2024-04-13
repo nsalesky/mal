@@ -13,15 +13,15 @@ mal: stepA_mal
 	cargo build --release --bin $*
 	cp target/release/$* $@
 
-#STEP0_DEPS = Cargo.toml
-#STEP1_DEPS = $(STEP0_DEPS) parser.rs printer.rs
-#STEP3_DEPS = $(STEP1_DEPS) env.rs
-#STEP4_DEPS = $(STEP3_DEPS) core.rs
+STEP0_DEPS = Cargo.toml
+STEP1_DEPS = $(STEP0_DEPS) src/types.rs src/parser.rs src/printer.rs
+STEP3_DEPS = $(STEP1_DEPS) env.rs
+STEP4_DEPS = $(STEP3_DEPS) core.rs
 
-#step0_repl: $(STEP0_DEPS)
-#step1_read_print step2_eval: $(STEP1_DEPS)
-#step3_env: $(STEP3_DEPS)
-#$(UPPER_STEPS): $(STEP4_DEPS)
+step0_repl: $(STEP0_DEPS)
+step1_read_print step2_eval: $(STEP1_DEPS)
+step3_env: $(STEP3_DEPS)
+$(UPPER_STEPS): $(STEP4_DEPS)
 
 .PHONY: clean
 
