@@ -33,6 +33,16 @@ impl Display for Expr {
                 }
                 write!(f, ")")
             }
+            Expr::Vector(elements) => {
+                write!(f, "[")?;
+                for (i, elem) in elements.into_iter().enumerate() {
+                    write!(f, "{}", elem)?;
+                    if i < elements.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+                write!(f, "]")
+            }
             Expr::Quote(expr) => {
                 write!(f, "(quote {})", expr)
             }
@@ -93,6 +103,17 @@ mod tests {
             ])),
             Expr::Integer(2)
         ])).to_string());
+    }
+
+    #[test]
+    fn test_display_vector() {
+        assert_eq!("[1]", Expr::Vector(vec![Expr::Integer(1)]).to_string());
+
+        assert_eq!("[foo 1 2]", Expr::Vector(vec![
+            Expr::Symbol("foo".to_string()),
+            Expr::Integer(1),
+            Expr::Integer(2),
+        ]).to_string());
     }
 
     #[test]

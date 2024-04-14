@@ -10,4 +10,5 @@ pub enum Expr {
     False,
     Quote(Box<Expr>),
     List(LinkedList<Expr>),
+    Vector(Vec<Expr>),
 }

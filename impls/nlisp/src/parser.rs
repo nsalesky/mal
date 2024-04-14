@@ -56,12 +56,14 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     loop {
         match chars.peek() {
             Some(c) => match c {
-                '(' => return parse_list(chars),
                 c if c.is_digit(10) => return parse_integer(chars),
                 c if c.is_whitespace() => { chars.next(); }
                 ',' => { chars.next(); }
-                ')' => return Err(ParseError::InvalidString),
                 ';' => consume_comment(chars)?,
+                '(' => return parse_list(chars),
+                ')' => return Err(ParseError::UnbalancedParens),
+                '[' => return parse_vector(chars),
+                ']' => return Err(ParseError::UnbalancedParens),
                 '\"' => return parse_string(chars),
                 '\'' => {
                     chars.next();
@@ -89,42 +91,49 @@ fn consume_comment(chars: &mut Peekable<Chars>) -> Result<(), ParseError> {
     Ok(())
 }
 
-fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+fn consume_chars_between(chars: &mut Peekable<Chars>, open_delim: char, close_delim: char) -> Result<String, ParseError> {
     let mut inner_text = String::new();
-    let mut bracket_stack = LinkedList::new();
+    let mut num_opening_delimeters: u32 = 0;
 
     match chars.next() {
-        Some('(') => bracket_stack.push_front('('),
-        _ => return Err(ParseError::InvalidExpr("string did not begin with an opening paren".to_string()))
+        Some(c) if c == open_delim => num_opening_delimeters += 1,
+        _ => return Err(ParseError::InvalidExpr("expression did not begin with an opening delimiter".to_string()))
     }
 
     while let Some(c) = chars.next() {
         match c {
-            ')' => match bracket_stack.pop_front() {
-                Some('(') => {
-                    if bracket_stack.is_empty() {
-                        break;
-                    } else {
-                        inner_text.push(c);
-                    }
-                }
-                _ => return Err(ParseError::UnbalancedParens),
-            }
-            '(' => {
-                bracket_stack.push_front(c);
+            c if c == open_delim => {
+                num_opening_delimeters += 1;
                 inner_text.push(c);
+            }
+            c if c == close_delim => {
+                if num_opening_delimeters <= 0 {
+                    return Err(ParseError::UnbalancedParens);
+                } else if num_opening_delimeters == 1 {
+                    num_opening_delimeters -= 1;
+                    break;
+                } else {
+                    num_opening_delimeters -= 1;
+                    inner_text.push(c);
+                }
             }
             ';' => {
                 consume_comment(chars)?;
                 inner_text.push(' ');
             }
-            _ => { inner_text.push(c) }
+            _ => inner_text.push(c)
         }
     }
 
-    if !bracket_stack.is_empty() {
+    if num_opening_delimeters > 0 {
         return Err(ParseError::UnbalancedParens);
     }
+
+    Ok(inner_text)
+}
+
+fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+    let inner_text = consume_chars_between(chars, '(', ')')?;
 
     let mut expr_elements = LinkedList::new();
 
@@ -139,6 +148,24 @@ fn parse_list(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 
     Ok(Expr::List(expr_elements))
 }
+
+fn parse_vector(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+    let inner_text = consume_chars_between(chars, '[', ']')?;
+
+    let mut expr_elements = vec![];
+
+    let mut inner_text_chars = inner_text.chars().peekable();
+    while inner_text_chars.peek().is_some() {
+        match parse_chars(&mut inner_text_chars) {
+            Ok(expr) => expr_elements.push(expr),
+            Err(ParseError::EmptyExpr) => {}
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(Expr::Vector(expr_elements))
+}
+
 
 fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     let mut symbol_str = String::new();
@@ -254,6 +281,16 @@ mod tests {
             Expr::Integer(4)
         ]));
         assert_eq!(Ok(expected_expr), parse_text_to_expression(" (add   32      4) "));
+    }
+
+    #[test]
+    fn test_parse_vector() {
+        let expected_expr = Expr::Vector(vec![
+            Expr::Symbol("foo".to_string()),
+            Expr::Integer(32),
+            Expr::String("hi there".to_string()),
+        ]);
+        assert_eq!(Ok(expected_expr), parse_text_to_expression(" [ foo   32      \"hi there\" ] "));
     }
 
     #[test]
