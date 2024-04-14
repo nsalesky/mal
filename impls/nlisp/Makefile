@@ -13,7 +13,7 @@ mal: stepA_mal
 	cargo build --release --bin $*
 	cp target/release/$* $@
 
-STEP0_DEPS = Cargo.toml
+STEP0_DEPS = Cargo.toml src/lib.rs
 STEP1_DEPS = $(STEP0_DEPS) src/types.rs src/parser.rs src/printer.rs
 STEP3_DEPS = $(STEP1_DEPS) env.rs
 STEP4_DEPS = $(STEP3_DEPS) core.rs

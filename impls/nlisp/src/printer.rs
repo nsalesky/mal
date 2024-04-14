@@ -8,7 +8,7 @@ impl Display for Expr {
             Expr::Integer(val) => {
                 write!(f, "{}", val)
             }
-            Expr::Symbol(val) => {
+            Expr::Symbol(val) | Expr::Keyword(val) => {
                 write!(f, "{}", val)
             }
             Expr::String(val) => {
@@ -43,6 +43,16 @@ impl Display for Expr {
                 }
                 write!(f, "]")
             }
+            Expr::HashMap(pairs) => {
+                write!(f, "{{")?;
+                for (i, (key, value)) in pairs.iter().enumerate() {
+                    write!(f, "{} {}", key, value)?;
+                    if i < pairs.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+                write!(f, "}}")
+            }
             Expr::Quote(expr) => {
                 write!(f, "(quote {})", expr)
             }
@@ -66,6 +76,12 @@ mod tests {
     fn test_display_symbol() {
         assert_eq!("+", Expr::Symbol("+".to_string()).to_string());
         assert_eq!("foo-bar", Expr::Symbol("foo-bar".to_string()).to_string());
+    }
+
+    #[test]
+    fn test_display_keyword() {
+        assert_eq!(":foo", Expr::Keyword(":foo".to_string()).to_string());
+        assert_eq!(":foo-bar", Expr::Keyword(":foo-bar".to_string()).to_string());
     }
 
     #[test]
@@ -114,6 +130,17 @@ mod tests {
             Expr::Integer(1),
             Expr::Integer(2),
         ]).to_string());
+    }
+
+    #[test]
+    fn test_display_hashmap() {
+        assert_eq!("{\"foo\" 1}", Expr::HashMap(vec![(Expr::String("foo".to_string()), Expr::Integer(1))]).to_string());
+
+        let hashmap_expr = Expr::HashMap(vec![
+            (Expr::Keyword(":foo".to_string()), Expr::String("bar".to_string())),
+            (Expr::Keyword(":baz".to_string()), Expr::Integer(3)),
+        ]);
+        assert_eq!("{:foo \"bar\" :baz 3}", hashmap_expr.to_string());
     }
 
     #[test]

@@ -3,6 +3,7 @@ use std::iter::Peekable;
 use std::num::ParseIntError;
 use std::str::Chars;
 
+use itertools::Itertools;
 use thiserror::Error;
 
 use crate::parser::ParseError::EmptyExpr;
@@ -27,6 +28,9 @@ pub enum ParseError {
 
     #[error("invalid backslash character in string")]
     StringInvalidBackslash,
+
+    #[error("hashmap is missing a value for key `{0}`")]
+    HashmapMissingValue(String),
 
     #[error("the input string was invalid: {0}")]
     InvalidExpr(String),
@@ -64,6 +68,8 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                 ')' => return Err(ParseError::UnbalancedParens),
                 '[' => return parse_vector(chars),
                 ']' => return Err(ParseError::UnbalancedParens),
+                '{' => return parse_hashmap(chars),
+                '}' => return Err(ParseError::UnbalancedParens),
                 '\"' => return parse_string(chars),
                 '\'' => {
                     chars.next();
@@ -72,6 +78,11 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                         Err(e) => Err(e)
                     };
                 }
+                ':' => return match parse_symbol(chars) {
+                    Ok(Expr::Symbol(val)) => Ok(Expr::Keyword(val)),
+                    Ok(_) => Err(ParseError::InvalidExpr("keyword was not parsed as a symbol".to_string())),
+                    Err(e) => Err(e),
+                },
                 _ => return parse_symbol(chars)
             },
             None => return Err(EmptyExpr)
@@ -166,6 +177,29 @@ fn parse_vector(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     Ok(Expr::Vector(expr_elements))
 }
 
+fn parse_hashmap(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+    let inner_text = consume_chars_between(chars, '{', '}')?;
+    let inner_expressions = parse_text_to_expressions(inner_text.as_str())?;
+
+    if inner_expressions.len() % 2 != 0 {
+        return Err(ParseError::HashmapMissingValue(inner_expressions[inner_expressions.len() - 1].to_string()));
+    }
+
+
+    let map_pairs = inner_expressions
+        .iter()
+        .chunks(2)
+        .into_iter()
+        .map(|mut pair| {
+            let key = pair.next().expect("hashmap pair to have a key");
+            let value = pair.next().expect("hashmap pair to have a value");
+
+            (key.to_owned(), value.to_owned())
+        })
+        .collect();
+
+    Ok(Expr::HashMap(map_pairs))
+}
 
 fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     let mut symbol_str = String::new();
@@ -284,16 +318,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_vector() {
-        let expected_expr = Expr::Vector(vec![
-            Expr::Symbol("foo".to_string()),
-            Expr::Integer(32),
-            Expr::String("hi there".to_string()),
-        ]);
-        assert_eq!(Ok(expected_expr), parse_text_to_expression(" [ foo   32      \"hi there\" ] "));
-    }
-
-    #[test]
     fn test_parse_list_unbalance() {
         assert_eq!(Err(ParseError::UnbalancedParens),
                    parse_text_to_expression("(+ 1 2"));
@@ -312,6 +336,34 @@ mod tests {
         ]));
         assert_eq!(Ok(expected_expr), parse_text_to_expression("(  + 2   (*  3  4)  )  "))
     }
+
+    #[test]
+    fn test_parse_vector() {
+        let expected_expr = Expr::Vector(vec![
+            Expr::Symbol("foo".to_string()),
+            Expr::Integer(32),
+            Expr::String("hi there".to_string()),
+        ]);
+        assert_eq!(Ok(expected_expr), parse_text_to_expression(" [ foo   32      \"hi there\" ] "));
+    }
+
+    #[test]
+    fn test_parse_hashmap() {
+        assert_eq!(Ok(Expr::HashMap(vec![])), parse_text_to_expression("{}"));
+
+        let expected_expr = Expr::HashMap(vec![
+            (Expr::Keyword(":foo".to_string()), Expr::Integer(32)),
+            (Expr::Keyword(":bar".to_string()), Expr::String("hi there".to_string())),
+        ]);
+        assert_eq!(Ok(expected_expr), parse_text_to_expression(" { :foo  32 :bar     \"hi there\" } "));
+    }
+
+    #[test]
+    fn test_parse_hashmap_unbalanced() {
+        assert_eq!(Err(ParseError::HashmapMissingValue(":bar".to_string())),
+                   parse_text_to_expression("{:bar} "));
+    }
+
 
     #[test]
     fn test_parse_comment() {
