@@ -10,6 +10,8 @@ pub enum Expr {
     True,
     False,
     Quote(Box<Expr>),
+    Quasiquote(Box<Expr>),
+    Unquote(Box<Expr>),
     List(LinkedList<Expr>),
     Vector(Vec<Expr>),
     HashMap(Vec<(Expr, Expr)>),

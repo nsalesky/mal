@@ -56,6 +56,12 @@ impl Display for Expr {
             Expr::Quote(expr) => {
                 write!(f, "(quote {})", expr)
             }
+            Expr::Quasiquote(expr) => {
+                write!(f, "(quasiquote {})", expr)
+            }
+            Expr::Unquote(expr) => {
+                write!(f, "(unquote {})", expr)
+            }
         }
     }
 }
@@ -154,5 +160,11 @@ mod tests {
             Expr::True
         ]));
         assert_eq!("(quote (a 1 #t))", Expr::Quote(Box::new(list_expr)).to_string());
+    }
+
+    #[test]
+    fn test_display_quasiquote() {
+        assert_eq!("(quasiquote a)", Expr::Quasiquote(Box::new(Expr::Symbol("a".to_string()))).to_string());
+        assert_eq!("(quasiquote 123)", Expr::Quasiquote(Box::new(Expr::Integer(123))).to_string());
     }
 }

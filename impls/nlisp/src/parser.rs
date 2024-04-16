@@ -78,6 +78,13 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                         Err(e) => Err(e)
                     };
                 }
+                '`' => {
+                    chars.next();
+                    return match parse_chars(chars) {
+                        Ok(expr) => Ok(Expr::Quasiquote(Box::new(expr))),
+                        Err(e) => Err(e)
+                    };
+                }
                 ':' => return match parse_symbol(chars) {
                     Ok(Expr::Symbol(val)) => Ok(Expr::Keyword(val)),
                     Ok(_) => Err(ParseError::InvalidExpr("keyword was not parsed as a symbol".to_string())),
@@ -91,6 +98,13 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                             expr
                         ]))),
                         Err(e) => Err(e)
+                    };
+                }
+                '~' => {
+                    chars.next();
+                    return match parse_chars(chars) {
+                        Ok(expr) => Ok(Expr::Unquote(Box::new(expr))),
+                        Err(e) => Err(e),
                     };
                 }
                 _ => return parse_symbol(chars)
