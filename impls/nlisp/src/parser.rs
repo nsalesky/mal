@@ -20,6 +20,9 @@ pub enum ParseError {
     #[error("parentheses were unbalanced in expression")]
     UnbalancedParens,
 
+    #[error("quotes were unbalanced in string")]
+    UnbalancedString,
+
     #[error("integer contained a non-numeric character: `{0}`")]
     IntegerContainsNonNumericChar(char),
 
@@ -275,16 +278,17 @@ fn parse_string(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 
     let mut string_contents = String::new();
 
-    while let Some(c) = chars.next() {
-        match c {
-            '"' => break,
-            '\\' => match chars.next() {
-                Some('"') => string_contents.push('"'),
-                Some('n') => string_contents.push('\n'),
-                Some('\\') => string_contents.push('\\'),
+    loop {
+        match chars.next() {
+            Some('"') => break,
+            Some('\\') => match chars.next() {
+                Some('"') => string_contents.push_str("\\\""),
+                Some('n') => string_contents.push_str("\\n"),
+                Some('\\') => string_contents.push_str("\\\\"),
                 _ => return Err(ParseError::StringInvalidBackslash),
             }
-            _ => string_contents.push(c),
+            Some(c) => string_contents.push(c),
+            None => return Err(ParseError::UnbalancedString)
         }
     }
 
