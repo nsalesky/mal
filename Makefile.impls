@@ -200,4 +200,3 @@ xslt_STEP_TO_PROG =          impls/xslt/$($(1))
 zig_STEP_TO_PROG =           impls/zig/$($(1))
 
 nlisp_STEP_TO_PROG = impls/nlisp/$($(1))
-nickgo_STEP_TO_PROG = impls/nickgo/$($(1))
