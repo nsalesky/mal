@@ -5,7 +5,6 @@ pub enum Expr {
     Integer(i64),
     String(String),
     Symbol(String),
-    Keyword(String),
     Nil,
     True,
     False,

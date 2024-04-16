@@ -90,11 +90,7 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                         Err(e) => Err(e)
                     };
                 }
-                ':' => return match parse_symbol(chars) {
-                    Ok(Expr::Symbol(val)) => Ok(Expr::Keyword(val)),
-                    Ok(_) => Err(ParseError::InvalidExpr("keyword was not parsed as a symbol".to_string())),
-                    Err(e) => Err(e),
-                },
+                ':' => return parse_symbol(chars),
                 '@' => {
                     chars.next();
                     return match parse_chars(chars) {
@@ -413,8 +409,8 @@ mod tests {
         assert_eq!(Ok(Expr::HashMap(vec![])), parse_text_to_expression("{}"));
 
         let expected_expr = Expr::HashMap(vec![
-            (Expr::Keyword(":foo".to_string()), Expr::Integer(32)),
-            (Expr::Keyword(":bar".to_string()), Expr::String("hi there".to_string())),
+            (Expr::Symbol(":foo".to_string()), Expr::Integer(32)),
+            (Expr::Symbol(":bar".to_string()), Expr::String("hi there".to_string())),
         ]);
         assert_eq!(Ok(expected_expr), parse_text_to_expression(" { :foo  32 :bar     \"hi there\" } "));
     }
@@ -472,8 +468,8 @@ mod tests {
                 Expr::Integer(3),
             ]),
             Expr::HashMap(vec![
-                (Expr::Keyword(":a".to_string()), Expr::Integer(1)),
-                (Expr::Keyword(":b".to_string()), Expr::Integer(2)),
+                (Expr::Symbol(":a".to_string()), Expr::Integer(1)),
+                (Expr::Symbol(":b".to_string()), Expr::Integer(2)),
             ])
         ]));
 
