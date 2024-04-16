@@ -70,6 +70,8 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                 ']' => return Err(ParseError::UnbalancedParens),
                 '{' => return parse_hashmap(chars),
                 '}' => return Err(ParseError::UnbalancedParens),
+                '~' => return parse_tilde(chars),
+                '^' => return parse_metadata(chars),
                 '\"' => return parse_string(chars),
                 '\'' => {
                     chars.next();
@@ -98,22 +100,6 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                             expr
                         ]))),
                         Err(e) => Err(e)
-                    };
-                }
-                '~' => {
-                    chars.next();
-                    return match chars.peek() {
-                        Some('@') => {
-                            chars.next();
-                            return match parse_chars(chars) {
-                                Ok(expr) => Ok(Expr::SpliceUnquote(Box::new(expr))),
-                                Err(e) => Err(e),
-                            };
-                        }
-                        _ => match parse_chars(chars) {
-                            Ok(expr) => Ok(Expr::Unquote(Box::new(expr))),
-                            Err(e) => Err(e),
-                        }
                     };
                 }
                 _ => return parse_symbol(chars)
@@ -292,7 +278,7 @@ fn parse_string(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     while let Some(c) = chars.next() {
         match c {
             '"' => break,
-            '/' => match chars.next() {
+            '\\' => match chars.next() {
                 Some('"') => string_contents.push('"'),
                 Some('n') => string_contents.push('\n'),
                 Some('\\') => string_contents.push('\\'),
@@ -303,6 +289,44 @@ fn parse_string(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     }
 
     Ok(Expr::String(string_contents))
+}
+
+fn parse_tilde(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+    match chars.next() {
+        Some('~') => {}
+        _ => return Err(ParseError::InvalidExpr("expected expression to begin with a tilde".to_string()))
+    }
+
+    return match chars.peek() {
+        Some('@') => {
+            chars.next();
+            return match parse_chars(chars) {
+                Ok(expr) => Ok(Expr::SpliceUnquote(Box::new(expr))),
+                Err(e) => Err(e),
+            };
+        }
+        _ => match parse_chars(chars) {
+            Ok(expr) => Ok(Expr::Unquote(Box::new(expr))),
+            Err(e) => Err(e),
+        }
+    };
+}
+
+fn parse_metadata(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
+    match chars.next() {
+        Some('^') => {}
+        _ => return Err(ParseError::InvalidExpr("expected meta expression to begin with a `^`".to_string()))
+    }
+
+    // semantics of meta: ` #{:a 1 :b 2} [1 2 3] ` yields `(with-meta [1 2 3] {:a 1 :b 2})`
+    let metadata_expr = parse_chars(chars)?;
+    let body_expr = parse_chars(chars)?;
+
+    Ok(Expr::List(LinkedList::from([
+        Expr::Symbol("with-meta".to_string()),
+        body_expr,
+        metadata_expr,
+    ])))
 }
 
 #[cfg(test)]
@@ -432,6 +456,24 @@ mod tests {
             Expr::Symbol("foo".to_string()),
         ]));
         assert_eq!(Ok(expected_expr), parse_text_to_expression("@foo"));
+    }
+
+    #[test]
+    fn test_parse_metadata() {
+        let expected_expr = Expr::List(LinkedList::from([
+            Expr::Symbol("with-meta".to_string()),
+            Expr::Vector(vec![
+                Expr::Integer(1),
+                Expr::Integer(2),
+                Expr::Integer(3),
+            ]),
+            Expr::HashMap(vec![
+                (Expr::Keyword(":a".to_string()), Expr::Integer(1)),
+                (Expr::Keyword(":b".to_string()), Expr::Integer(2)),
+            ])
+        ]));
+
+        assert_eq!(Ok(expected_expr), parse_text_to_expression("^{:a 1 :b 2} [1 2 3]"));
     }
 
     #[test]
