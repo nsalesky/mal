@@ -18,10 +18,10 @@ impl Display for Expr {
                 write!(f, "nil")
             }
             Expr::True => {
-                write!(f, "#t")
+                write!(f, "true")
             }
             Expr::False => {
-                write!(f, "#f")
+                write!(f, "false")
             }
             Expr::List(elements) => {
                 write!(f, "(")?;
@@ -62,6 +62,9 @@ impl Display for Expr {
             Expr::Unquote(expr) => {
                 write!(f, "(unquote {})", expr)
             }
+            Expr::SpliceUnquote(expr) => {
+                write!(f, "(splice-unquote {})", expr)
+            }
         }
     }
 }
@@ -99,8 +102,8 @@ mod tests {
     #[test]
     fn test_display_identifiers() {
         assert_eq!("nil", Expr::Nil.to_string());
-        assert_eq!("#t", Expr::True.to_string());
-        assert_eq!("#f", Expr::False.to_string());
+        assert_eq!("true", Expr::True.to_string());
+        assert_eq!("false", Expr::False.to_string());
     }
 
     #[test]
@@ -159,7 +162,7 @@ mod tests {
             Expr::Integer(1),
             Expr::True
         ]));
-        assert_eq!("(quote (a 1 #t))", Expr::Quote(Box::new(list_expr)).to_string());
+        assert_eq!("(quote (a 1 true))", Expr::Quote(Box::new(list_expr)).to_string());
     }
 
     #[test]

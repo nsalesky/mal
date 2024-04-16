@@ -12,6 +12,7 @@ pub enum Expr {
     Quote(Box<Expr>),
     Quasiquote(Box<Expr>),
     Unquote(Box<Expr>),
+    SpliceUnquote(Box<Expr>),
     List(LinkedList<Expr>),
     Vector(Vec<Expr>),
     HashMap(Vec<(Expr, Expr)>),

@@ -102,9 +102,18 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                 }
                 '~' => {
                     chars.next();
-                    return match parse_chars(chars) {
-                        Ok(expr) => Ok(Expr::Unquote(Box::new(expr))),
-                        Err(e) => Err(e),
+                    return match chars.peek() {
+                        Some('@') => {
+                            chars.next();
+                            return match parse_chars(chars) {
+                                Ok(expr) => Ok(Expr::SpliceUnquote(Box::new(expr))),
+                                Err(e) => Err(e),
+                            };
+                        }
+                        _ => match parse_chars(chars) {
+                            Ok(expr) => Ok(Expr::Unquote(Box::new(expr))),
+                            Err(e) => Err(e),
+                        }
                     };
                 }
                 _ => return parse_symbol(chars)
