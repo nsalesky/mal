@@ -83,6 +83,16 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                     Ok(_) => Err(ParseError::InvalidExpr("keyword was not parsed as a symbol".to_string())),
                     Err(e) => Err(e),
                 },
+                '@' => {
+                    chars.next();
+                    return match parse_chars(chars) {
+                        Ok(expr) => Ok(Expr::List(LinkedList::from([
+                            Expr::Symbol("deref".to_string()),
+                            expr
+                        ]))),
+                        Err(e) => Err(e)
+                    };
+                }
                 _ => return parse_symbol(chars)
             },
             None => return Err(EmptyExpr)
@@ -390,6 +400,15 @@ mod tests {
     fn test_parse_quote() {
         assert_eq!(Ok(Expr::Quote(Box::new(Expr::Symbol("a".to_string())))),
                    parse_text_to_expression("'a"));
+    }
+
+    #[test]
+    fn test_parse_deref() {
+        let expected_expr = Expr::List(LinkedList::from([
+            Expr::Symbol("deref".to_string()),
+            Expr::Symbol("foo".to_string()),
+        ]));
+        assert_eq!(Ok(expected_expr), parse_text_to_expression("@foo"));
     }
 
     #[test]
