@@ -129,7 +129,7 @@ impl Display for HashableValue {
         match self {
             HashableValue::Integer(num) => write!(f, "{}", num),
             HashableValue::String(s) => write!(f, "\"{}\"", s),
-            HashableValue::Keyword(s) => writeln!(f, "{}", s),
+            HashableValue::Keyword(s) => write!(f, "{}", s),
         }
     }
 }
