@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 thiserror = "1.0.58"
 itertools = "0.12.1"
+rpds = "1.1.0"
 
 [[bin]]
 name = "nlisp"

@@ -234,8 +234,8 @@ fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     // check if this corresponds to a special identifier
     match symbol_str.as_str() {
         "nil" => Ok(Expr::Nil),
-        "true" | "#t" => Ok(Expr::True),
-        "false" | "#f" => Ok(Expr::False),
+        "true" | "#t" => Ok(Expr::Boolean(true)),
+        "false" | "#f" => Ok(Expr::Boolean(false)),
         _ => Ok(Expr::Symbol(symbol_str))
     }
 }
@@ -437,10 +437,10 @@ mod tests {
     #[test]
     fn test_parse_identifiers() {
         assert_eq!(Ok(Expr::Nil), parse_text_to_expression("nil"));
-        assert_eq!(Ok(Expr::True), parse_text_to_expression("true"));
-        assert_eq!(Ok(Expr::True), parse_text_to_expression("#t"));
-        assert_eq!(Ok(Expr::False), parse_text_to_expression("false"));
-        assert_eq!(Ok(Expr::False), parse_text_to_expression("#f"));
+        assert_eq!(Ok(Expr::Boolean(true)), parse_text_to_expression("true"));
+        assert_eq!(Ok(Expr::Boolean(true)), parse_text_to_expression("#t"));
+        assert_eq!(Ok(Expr::Boolean(false)), parse_text_to_expression("false"));
+        assert_eq!(Ok(Expr::Boolean(false)), parse_text_to_expression("#f"));
     }
 
     #[test]

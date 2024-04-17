@@ -1,6 +1,20 @@
+use core::fmt;
 use std::fmt::{Display, Formatter};
 
-use crate::types::Expr;
+use crate::types::{Expr, HashableValue, Value};
+
+fn write_space_separated_elems<T>(f: &mut Formatter, elems: T) -> std::fmt::Result
+    where T: IntoIterator,
+          T::Item: fmt::Display
+{
+    for (i, elem) in elems.into_iter().enumerate() {
+        if i > 0 {
+            write!(f, " ")?;
+        }
+        write!(f, "{}", elem)?;
+    }
+    Ok(())
+}
 
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
@@ -17,40 +31,28 @@ impl Display for Expr {
             Expr::Nil => {
                 write!(f, "nil")
             }
-            Expr::True => {
-                write!(f, "true")
-            }
-            Expr::False => {
-                write!(f, "false")
+            Expr::Boolean(b) => {
+                if *b {
+                    write!(f, "true")
+                } else {
+                    write!(f, "false")
+                }
             }
             Expr::List(elements) => {
                 write!(f, "(")?;
-                for (i, elem) in elements.into_iter().enumerate() {
-                    write!(f, "{}", elem)?;
-                    if i < elements.len() - 1 {
-                        write!(f, " ")?;
-                    }
-                }
+                write_space_separated_elems(f, elements)?;
                 write!(f, ")")
             }
             Expr::Vector(elements) => {
                 write!(f, "[")?;
-                for (i, elem) in elements.into_iter().enumerate() {
-                    write!(f, "{}", elem)?;
-                    if i < elements.len() - 1 {
-                        write!(f, " ")?;
-                    }
-                }
+                write_space_separated_elems(f, elements)?;
                 write!(f, "]")
             }
             Expr::HashMap(pairs) => {
                 write!(f, "{{")?;
-                for (i, (key, value)) in pairs.iter().enumerate() {
-                    write!(f, "{} {}", key, value)?;
-                    if i < pairs.len() - 1 {
-                        write!(f, " ")?;
-                    }
-                }
+                write_space_separated_elems(f, pairs.iter().map(|(key, value)|
+                    format!("{} {}", key, value)
+                ))?;
                 write!(f, "}}")
             }
             Expr::Quote(expr) => {
@@ -65,6 +67,69 @@ impl Display for Expr {
             Expr::SpliceUnquote(expr) => {
                 write!(f, "(splice-unquote {})", expr)
             }
+        }
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Integer(val) => {
+                write!(f, "{}", val)
+            }
+            Value::Symbol(val) => {
+                write!(f, "{}", val)
+            }
+            Value::String(val) => {
+                write!(f, "\"{}\"", val)
+            }
+            Value::Nil => {
+                write!(f, "nil")
+            }
+            Value::Boolean(b) => {
+                if *b {
+                    write!(f, "true")
+                } else {
+                    write!(f, "false")
+                }
+            }
+            Value::List(elements) => {
+                write!(f, "(")?;
+                write_space_separated_elems(f, elements)?;
+                write!(f, ")")
+            }
+            Value::Vector(elements) => {
+                write!(f, "[")?;
+                write_space_separated_elems(f, elements)?;
+                write!(f, "]")
+            }
+            Value::HashMap(pairs) => {
+                write!(f, "{{")?;
+                write_space_separated_elems(f, pairs.iter().map(|(key, value)|
+                    format!("{} {}", key, value)
+                ))?;
+                write!(f, "}}")
+            }
+            Value::Function { arg_names, body } => {
+                write!(f, "(fn (")?;
+                write_space_separated_elems(f, arg_names)?;
+                write!(f, ")")?;
+
+                // TODO: should print out the body somehow
+                write!(f, "...")?;
+
+                write!(f, ")")
+            }
+        }
+    }
+}
+
+impl Display for HashableValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HashableValue::Integer(num) => write!(f, "{}", num),
+            HashableValue::String(s) => write!(f, "\"{}\"", s),
+            HashableValue::Symbol(s) => writeln!(f, "{}", s),
         }
     }
 }
@@ -102,8 +167,8 @@ mod tests {
     #[test]
     fn test_display_identifiers() {
         assert_eq!("nil", Expr::Nil.to_string());
-        assert_eq!("true", Expr::True.to_string());
-        assert_eq!("false", Expr::False.to_string());
+        assert_eq!("true", Expr::Boolean(true).to_string());
+        assert_eq!("false", Expr::Boolean(false).to_string());
     }
 
     #[test]
@@ -160,7 +225,7 @@ mod tests {
         let list_expr = Expr::List(LinkedList::from([
             Expr::Symbol("a".to_string()),
             Expr::Integer(1),
-            Expr::True
+            Expr::Boolean(true)
         ]));
         assert_eq!("(quote (a 1 true))", Expr::Quote(Box::new(list_expr)).to_string());
     }
