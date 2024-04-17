@@ -2,6 +2,7 @@ use std::collections::{HashMap, LinkedList};
 
 use thiserror::Error;
 
+use crate::env::Environment;
 use crate::evaluator::RuntimeError;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -22,7 +23,7 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionBody {
-    Builtin(fn(Vec<Value>) -> Result<Value, RuntimeError>),
+    Builtin(fn(&Environment) -> Result<Value, RuntimeError>),
     // TODO: user defined functions
 }
 

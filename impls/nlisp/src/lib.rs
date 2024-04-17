@@ -11,6 +11,7 @@ mod parser;
 mod printer;
 mod evaluator;
 mod env;
+mod builtins;
 
 pub fn rep(input: &str) -> Result<String, RuntimeError> {
     let exprs = parse_text_to_expressions(input)?;
