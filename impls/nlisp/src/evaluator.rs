@@ -32,6 +32,7 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
     match expr {
         Expr::Integer(num) => Ok(Value::Integer(num)),
         Expr::String(s) => Ok(Value::String(s)),
+        Expr::Keyword(s) => Ok(Value::Keyword(s)),
         Expr::Symbol(s) => {
             match env.lookup_symbol(s.as_str()) {
                 Some(val) => Ok(val),
@@ -49,6 +50,11 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
             for list_expr in list_exprs {
                 list_values.push(evaluate_expr(list_expr, env)?);
             }
+
+            if list_values.is_empty() {
+                return Ok(Value::List(LinkedList::new()));
+            }
+
             let expected_arg_count = list_values.len() - 1;
             let mut list_values = list_values.iter_mut();
 
@@ -61,7 +67,7 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
                     // Create a new environment with all of the argument names bound to their values
                     let mut new_env = env.to_owned();
                     for (arg_name, binding_value) in arg_names.iter().zip(list_values) {
-                        new_env.insert_global_symbol(arg_name.to_owned(), binding_value.to_owned());
+                        new_env.insert_symbol(arg_name.to_owned(), binding_value.to_owned());
                     }
 
                     match **body {
@@ -70,7 +76,6 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
                         }
                     }
                 }
-                None => Ok(Value::List(LinkedList::new())),
                 _ => Err(RuntimeError::CannotApplyNonFunction)
             }
         }
@@ -122,7 +127,7 @@ mod tests {
     fn test_evaluate_symbol() {
         let mut env = Environment::default();
         assert_eq!(Err(RuntimeError::UnboundSymbol("foo".to_string())), evaluate_expr(Expr::Symbol("foo".to_string()), &mut env));
-        env.insert_global_symbol("foo".to_string(), Value::Integer(3));
+        env.insert_symbol("foo".to_string(), Value::Integer(3));
         assert_eq!(Ok(Value::Integer(3)), evaluate_expr(Expr::Symbol("foo".to_string()), &mut env));
     }
 

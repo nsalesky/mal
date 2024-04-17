@@ -10,6 +10,7 @@ pub enum Expr {
     Integer(i64),
     String(String),
     Symbol(String),
+    Keyword(String),
     Nil,
     Boolean(bool),
     Quote(Box<Expr>),
@@ -32,6 +33,7 @@ pub enum Value {
     Integer(i64),
     String(String),
     Symbol(String),
+    Keyword(String),
     Boolean(bool),
     List(LinkedList<Value>),
     Vector(Vec<Value>),
@@ -44,7 +46,7 @@ pub enum Value {
 pub enum HashableValue {
     Integer(i64),
     String(String),
-    Symbol(String),
+    Keyword(String),
 }
 
 #[derive(Error, Debug)]
@@ -60,7 +62,7 @@ impl TryInto<HashableValue> for Value {
         match self {
             Value::Integer(num) => Ok(HashableValue::Integer(num)),
             Value::String(s) => Ok(HashableValue::String(s)),
-            Value::Symbol(s) => Ok(HashableValue::Symbol(s)),
+            Value::Keyword(s) => Ok(HashableValue::Keyword(s)),
             _ => Err(HashValueError::UnhashableValue(self))
         }
     }

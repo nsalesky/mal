@@ -22,7 +22,7 @@ impl Display for Expr {
             Expr::Integer(val) => {
                 write!(f, "{}", val)
             }
-            Expr::Symbol(val) => {
+            Expr::Symbol(val) | Expr::Keyword(val) => {
                 write!(f, "{}", val)
             }
             Expr::String(val) => {
@@ -77,7 +77,7 @@ impl Display for Value {
             Value::Integer(val) => {
                 write!(f, "{}", val)
             }
-            Value::Symbol(val) => {
+            Value::Symbol(val) | Value::Keyword(val) => {
                 write!(f, "{}", val)
             }
             Value::String(val) => {
@@ -129,7 +129,7 @@ impl Display for HashableValue {
         match self {
             HashableValue::Integer(num) => write!(f, "{}", num),
             HashableValue::String(s) => write!(f, "\"{}\"", s),
-            HashableValue::Symbol(s) => writeln!(f, "{}", s),
+            HashableValue::Keyword(s) => writeln!(f, "{}", s),
         }
     }
 }
