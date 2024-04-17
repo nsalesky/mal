@@ -76,6 +76,15 @@ pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
                 '~' => return parse_tilde(chars),
                 '^' => return parse_metadata(chars),
                 '\"' => return parse_string(chars),
+                '-' => return match parse_symbol(chars) {
+                    // Special case to allow both negative numbers and the `-` function
+                    Ok(Expr::Symbol(c)) => match c.as_str() {
+                        "-" => Ok(Expr::Symbol(c)), // return the `-` symbol
+                        c => parse_integer(&mut c.chars().peekable()) // else, assume it is an integer
+                    }
+                    Err(e) => Err(e),
+                    _ => panic!("expected parse_symbol to return either a symbol or an error")
+                },
                 '\'' => {
                     chars.next();
                     return match parse_chars(chars) {
@@ -247,6 +256,12 @@ fn parse_symbol(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 fn parse_integer(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     let mut integer_str = String::new();
 
+    // check for negative numbers
+    if let Some('-') = chars.peek() {
+        chars.next();
+        integer_str.push('-');
+    }
+
     while let Some(c) = chars.peek() {
         match c {
             c if c.is_digit(10) => {
@@ -347,6 +362,7 @@ mod tests {
         assert_eq!(Ok(Expr::Symbol("foo".to_string())), parse_text_to_expression("foo"));
         assert_eq!(Ok(Expr::Symbol("foo-bar".to_string())), parse_text_to_expression(" foo-bar   "));
         assert_eq!(Ok(Expr::Symbol("hi".to_string())), parse_text_to_expression("    hi"));
+        assert_eq!(Ok(Expr::Symbol("-".to_string())), parse_text_to_expression("-"));
     }
 
     #[test]
@@ -360,6 +376,7 @@ mod tests {
         assert_eq!(Ok(Expr::Integer(18)), parse_text_to_expression(" 18"));
         assert_eq!(Ok(Expr::Integer(100)), parse_text_to_expression(" 100    "));
         assert_eq!(Ok(Expr::Integer(3)), parse_text_to_expression("      3    "));
+        assert_eq!(Ok(Expr::Integer(-4)), parse_text_to_expression("      -4    "));
     }
 
     #[test]
