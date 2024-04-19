@@ -1,12 +1,9 @@
 use std::collections::VecDeque;
-use std::hash::Hash;
 
 pub use arithmetic::{add, div, mul, sub};
-pub use special_forms::def;
+pub use special_forms::{def, let_f};
 
-use crate::env::Environment;
 use crate::evaluator::RuntimeError;
-use crate::types::{Expr, Value};
 
 mod arithmetic;
 mod special_forms;

@@ -110,7 +110,7 @@ impl Display for Value {
                 ))?;
                 write!(f, "}}")
             }
-            Value::Function(function_body) => {
+            Value::Function(_function_body) => {
                 write!(f, "(fn ...)")
             }
         }

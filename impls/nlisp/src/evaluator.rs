@@ -8,6 +8,12 @@ use crate::parser::ParseError;
 use crate::types::{Expr, FunctionBody, HashableValue, Value};
 
 #[derive(Error, Debug, PartialEq)]
+pub enum TypeError {
+    #[error("miscellaneous type error. This should eventually be replaced with more specific errors")]
+    Misc
+}
+
+#[derive(Error, Debug, PartialEq)]
 pub enum RuntimeError {
     #[error("parse error: `{0}`")]
     ParseError(#[from] ParseError),
@@ -15,7 +21,7 @@ pub enum RuntimeError {
     #[error("attempted to hash an unhashable value: `{0}`")]
     HashError(Value),
 
-    #[error("attempted to access an unbound symbol: `{0}`")]
+    #[error("symbol '{0}' not found")]
     UnboundSymbol(String),
 
     #[error("attempted to apply an expression that did not evaluate to a function")]
@@ -27,8 +33,14 @@ pub enum RuntimeError {
     #[error("expected to bind to a symbol value, but expression evaluated to a different type")]
     ExpectedToBindSymbol,
 
-    #[error("expression evaluated to the wrong type")]
-    IncorrectType,
+    #[error("expression evaluated to the wrong type: {0}")]
+    IncorrectType(#[from] TypeError),
+
+    #[error("encountered a let binding identifier with no corresponding assignment")]
+    UnmatchedLetBindingID,
+
+    #[error("a miscellaneous error. These should eventually be replaced with more specific errors")]
+    Misc,
 }
 
 pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, RuntimeError> {

@@ -28,6 +28,9 @@ impl Default for Environment {
         default_env.insert_mut("def!".to_string(), Value::Function(
             FunctionBody::BuiltinExpressions(builtins::def)
         ));
+        default_env.insert_mut("let*".to_string(), Value::Function(
+            FunctionBody::BuiltinExpressions(builtins::let_f)
+        ));
 
         Self {
             env: default_env

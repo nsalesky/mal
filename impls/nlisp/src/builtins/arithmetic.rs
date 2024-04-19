@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::builtins::assert_args_length;
 use crate::Environment;
-use crate::evaluator::RuntimeError;
+use crate::evaluator::{RuntimeError, TypeError};
 use crate::types::Value;
 
 pub fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
@@ -15,7 +15,7 @@ pub fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
         (Value::Integer(num_a), Value::Integer(num_b)) => {
             Ok(Value::Integer(num_a + num_b))
         }
-        _ => Err(RuntimeError::IncorrectType)
+        _ => Err(RuntimeError::IncorrectType(TypeError::Misc))
     }
 }
 
@@ -29,7 +29,7 @@ pub fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
         (Value::Integer(num_a), Value::Integer(num_b)) => {
             Ok(Value::Integer(num_a - num_b))
         }
-        _ => Err(RuntimeError::IncorrectType)
+        _ => Err(RuntimeError::IncorrectType(TypeError::Misc))
     }
 }
 
@@ -43,7 +43,7 @@ pub fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
         (Value::Integer(num_a), Value::Integer(num_b)) => {
             Ok(Value::Integer(num_a * num_b))
         }
-        _ => Err(RuntimeError::IncorrectType)
+        _ => Err(RuntimeError::IncorrectType(TypeError::Misc))
     }
 }
 
@@ -57,7 +57,7 @@ pub fn div(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
         (Value::Integer(num_a), Value::Integer(num_b)) => {
             Ok(Value::Integer(num_a / num_b))
         }
-        _ => Err(RuntimeError::IncorrectType)
+        _ => Err(RuntimeError::IncorrectType(TypeError::Misc))
     }
 }
 
@@ -100,7 +100,7 @@ mod tests {
                 Value::Integer(1),
                 Value::Symbol("foo".to_string())
             ]);
-            assert_eq!(Err(RuntimeError::IncorrectType), add(&mut env, values));
+            assert_eq!(Err(RuntimeError::IncorrectType(TypeError::Misc)), add(&mut env, values));
         }
     }
 }
