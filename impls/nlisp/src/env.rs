@@ -34,6 +34,18 @@ impl Default for Environment {
         default_env.insert_mut("fn*".to_string(), Value::Function(
             FunctionBody::BuiltinExpressions(builtins::fn_f)
         ));
+        default_env.insert_mut("list".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::list_f)
+        ));
+        default_env.insert_mut("list?".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::list_p)
+        ));
+        default_env.insert_mut("empty?".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::empty_p)
+        ));
+        default_env.insert_mut("count".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::count)
+        ));
 
         Self {
             env: default_env
