@@ -1,9 +1,11 @@
 use std::io;
 use std::io::Write;
 
-use nlisp::rep;
+use nlisp::{Environment, rep};
 
 fn main() -> Result<(), io::Error> {
+    let mut env = Environment::default();
+
     loop {
         print!("user> ");
         io::stdout().flush()?;
@@ -15,7 +17,7 @@ fn main() -> Result<(), io::Error> {
             return Ok(());
         }
 
-        match rep(input_buffer.as_str()) {
+        match rep(input_buffer.as_str(), &mut env) {
             Ok(output) => print!("{}", output),
             Err(e) => println!("error: {}", e),
         }
