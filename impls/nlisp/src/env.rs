@@ -13,22 +13,21 @@ impl Default for Environment {
     fn default() -> Self {
         let mut default_env = HashTrieMap::new();
 
-        default_env.insert_mut("+".to_string(), Value::Function {
-            arg_names: vec!["arg-1".to_string(), "arg-2".to_string()],
-            body: Box::new(FunctionBody::Builtin(builtins::add)),
-        });
-        default_env.insert_mut("-".to_string(), Value::Function {
-            arg_names: vec!["arg-1".to_string(), "arg-2".to_string()],
-            body: Box::new(FunctionBody::Builtin(builtins::sub)),
-        });
-        default_env.insert_mut("*".to_string(), Value::Function {
-            arg_names: vec!["arg-1".to_string(), "arg-2".to_string()],
-            body: Box::new(FunctionBody::Builtin(builtins::mul)),
-        });
-        default_env.insert_mut("/".to_string(), Value::Function {
-            arg_names: vec!["arg-1".to_string(), "arg-2".to_string()],
-            body: Box::new(FunctionBody::Builtin(builtins::div)),
-        });
+        default_env.insert_mut("+".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::add)
+        ));
+        default_env.insert_mut("-".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::sub)
+        ));
+        default_env.insert_mut("*".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::mul)
+        ));
+        default_env.insert_mut("/".to_string(), Value::Function(
+            FunctionBody::BuiltinValues(builtins::div)
+        ));
+        default_env.insert_mut("def!".to_string(), Value::Function(
+            FunctionBody::BuiltinExpressions(builtins::def)
+        ));
 
         Self {
             env: default_env

@@ -110,15 +110,8 @@ impl Display for Value {
                 ))?;
                 write!(f, "}}")
             }
-            Value::Function { arg_names, body } => {
-                write!(f, "(fn (")?;
-                write_space_separated_elems(f, arg_names)?;
-                write!(f, ")")?;
-
-                // TODO: should print out the body somehow
-                write!(f, "...")?;
-
-                write!(f, ")")
+            Value::Function(function_body) => {
+                write!(f, "(fn ...)")
             }
         }
     }
@@ -138,7 +131,8 @@ impl Display for HashableValue {
 mod tests {
     use std::collections::LinkedList;
 
-    use crate::types::Expr;
+    use crate::builtins;
+    use crate::types::{Expr, FunctionBody, Value};
 
     #[test]
     fn test_display_integer() {
@@ -234,5 +228,13 @@ mod tests {
     fn test_display_quasiquote() {
         assert_eq!("(quasiquote a)", Expr::Quasiquote(Box::new(Expr::Symbol("a".to_string()))).to_string());
         assert_eq!("(quasiquote 123)", Expr::Quasiquote(Box::new(Expr::Integer(123))).to_string());
+    }
+
+    // TODO: should convert the above tests to Value
+    #[test]
+    fn test_display_function() {
+        let val = Value::Function(FunctionBody::BuiltinValues(builtins::add));
+
+        assert_eq!("(fn ...)", val.to_string());
     }
 }

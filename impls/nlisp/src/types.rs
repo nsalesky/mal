@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList};
+use std::collections::{HashMap, LinkedList, VecDeque};
 
 use thiserror::Error;
 
@@ -24,7 +24,8 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionBody {
-    Builtin(fn(&Environment) -> Result<Value, RuntimeError>),
+    BuiltinValues(fn(&mut Environment, VecDeque<Value>) -> Result<Value, RuntimeError>),
+    BuiltinExpressions(fn(&mut Environment, VecDeque<Expr>) -> Result<Value, RuntimeError>),
     // TODO: user defined functions
 }
 
@@ -38,7 +39,7 @@ pub enum Value {
     List(LinkedList<Value>),
     Vector(Vec<Value>),
     HashMap(HashMap<HashableValue, Value>),
-    Function { arg_names: Vec<String>, body: Box<FunctionBody> },
+    Function(FunctionBody),
     Nil,
 }
 

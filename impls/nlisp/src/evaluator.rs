@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList};
+use std::collections::{HashMap, LinkedList, VecDeque};
 
 use thiserror::Error;
 
@@ -21,8 +21,11 @@ pub enum RuntimeError {
     #[error("attempted to apply an expression that did not evaluate to a function")]
     CannotApplyNonFunction,
 
-    #[error("attempted to apply a function with the wrong number of arguments. Given {0} but expected {1} args")]
-    FunctionApplicationWrongNumberOfArgs(u32, u32),
+    #[error("attempted to apply a function with the wrong number of arguments. Given {given} but expected {expected} args")]
+    FunctionApplicationWrongNumberOfArgs { given: usize, expected: usize },
+
+    #[error("expected to bind to a symbol value, but expression evaluated to a different type")]
+    ExpectedToBindSymbol,
 
     #[error("expression evaluated to the wrong type")]
     IncorrectType,
@@ -46,37 +49,20 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
         Expr::Unquote(_) => todo!(),
         Expr::SpliceUnquote(_) => todo!(),
         Expr::List(list_exprs) => {
-            let mut list_values = Vec::with_capacity(list_exprs.len());
-            for list_expr in list_exprs {
-                list_values.push(evaluate_expr(list_expr, env)?);
-            }
-
-            if list_values.is_empty() {
-                return Ok(Value::List(LinkedList::new()));
-            }
-
-            let expected_arg_count = list_values.len() - 1;
-            let mut list_values = list_values.iter_mut();
-
-            match list_values.next() {
-                Some(Value::Function { arg_names, body }) => {
-                    if arg_names.len() != expected_arg_count {
-                        return Err(RuntimeError::FunctionApplicationWrongNumberOfArgs(expected_arg_count as u32, arg_names.len() as u32));
+            let mut list_expr_iter = list_exprs.iter();
+            match list_expr_iter.next() {
+                Some(expr) => match evaluate_expr(expr.clone(), env) {
+                    Ok(Value::Function(func_body)) => {
+                        apply_function(func_body,
+                                       list_expr_iter
+                                           .map(|expr| expr.clone())
+                                           .collect(),
+                                       env)
                     }
-
-                    // Create a new environment with all of the argument names bound to their values
-                    let mut new_env = env.to_owned();
-                    for (arg_name, binding_value) in arg_names.iter().zip(list_values) {
-                        new_env.insert_symbol(arg_name.to_owned(), binding_value.to_owned());
-                    }
-
-                    match **body {
-                        FunctionBody::Builtin(fn_pointer) => {
-                            fn_pointer(&new_env)
-                        }
-                    }
+                    Ok(_) => Err(RuntimeError::CannotApplyNonFunction),
+                    Err(e) => Err(e),
                 }
-                _ => Err(RuntimeError::CannotApplyNonFunction)
+                None => Ok(Value::List(LinkedList::new()))
             }
         }
         Expr::Vector(v) => {
@@ -96,6 +82,19 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
             }
 
             Ok(Value::HashMap(ret_hashmap))
+        }
+    }
+}
+
+fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &mut Environment) -> Result<Value, RuntimeError> {
+    match function_body {
+        FunctionBody::BuiltinExpressions(func_pointer) => func_pointer(env, arg_exprs),
+        FunctionBody::BuiltinValues(func_pointer) => {
+            let mut arg_values = VecDeque::with_capacity(arg_exprs.len());
+            for arg_expr in arg_exprs {
+                arg_values.push_back(evaluate_expr(arg_expr, env)?);
+            }
+            func_pointer(env, arg_values)
         }
     }
 }
