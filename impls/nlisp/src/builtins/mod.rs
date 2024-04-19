@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 pub use arithmetic::{add, div, mul, sub};
-pub use special_forms::{def, let_f};
+pub use special_forms::{def, fn_f, let_f};
 
 use crate::evaluator::RuntimeError;
 

@@ -26,7 +26,7 @@ pub enum Expr {
 pub enum FunctionBody {
     BuiltinValues(fn(&mut Environment, VecDeque<Value>) -> Result<Value, RuntimeError>),
     BuiltinExpressions(fn(&mut Environment, VecDeque<Expr>) -> Result<Value, RuntimeError>),
-    // TODO: user defined functions
+    Closure { closed_env: Environment, params: Vec<String>, body: Expr },
 }
 
 #[derive(Debug, Clone, PartialEq)]

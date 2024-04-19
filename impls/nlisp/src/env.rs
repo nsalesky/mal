@@ -4,7 +4,7 @@ use crate::builtins;
 use crate::evaluator::RuntimeError;
 use crate::types::{FunctionBody, Value};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Environment {
     env: HashTrieMap<String, Value>,
 }
@@ -30,6 +30,9 @@ impl Default for Environment {
         ));
         default_env.insert_mut("let*".to_string(), Value::Function(
             FunctionBody::BuiltinExpressions(builtins::let_f)
+        ));
+        default_env.insert_mut("fn*".to_string(), Value::Function(
+            FunctionBody::BuiltinExpressions(builtins::fn_f)
         ));
 
         Self {

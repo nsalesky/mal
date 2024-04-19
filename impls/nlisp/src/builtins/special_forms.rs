@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::builtins::assert_args_length;
 use crate::Environment;
 use crate::evaluator::{evaluate_expr, RuntimeError, TypeError};
-use crate::types::{Expr, Value};
+use crate::types::{Expr, FunctionBody, Value};
 
 pub fn def(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_exprs, 2)?;
@@ -66,6 +66,33 @@ pub fn let_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Val
     }?;
 
     evaluate_expr(body_expr, &mut new_env)
+}
+
+pub fn fn_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+    assert_args_length(&arg_exprs, 2)?;
+
+    let param_list_expr = arg_exprs.pop_front().expect("parameter list to be present");
+    let body_expr = arg_exprs.pop_front().expect("function body to be present");
+
+    let param_names = match param_list_expr {
+        Expr::List(elems) => {
+            let mut param_names = Vec::with_capacity(elems.len());
+            for elem in elems {
+                match elem {
+                    Expr::Symbol(param_name) => { param_names.push(param_name) }
+                    _ => return Err(RuntimeError::ExpectedToBindSymbol),
+                }
+            }
+            param_names
+        }
+        _ => return Err(RuntimeError::ExpectedToBindSymbol)
+    };
+
+    Ok(Value::Function(FunctionBody::Closure {
+        closed_env: env.clone(),
+        params: param_names,
+        body: body_expr,
+    }))
 }
 
 #[cfg(test)]
@@ -172,6 +199,83 @@ mod tests {
                 Expr::Integer(3),
             ]);
             assert_eq!(Err(RuntimeError::ExpectedToBindSymbol), let_f(&mut env, exprs));
+        }
+    }
+
+    mod test_fn_f {
+        use std::collections::{LinkedList, VecDeque};
+
+        use crate::builtins::fn_f;
+        use crate::Environment;
+        use crate::evaluator::RuntimeError;
+        use crate::types::{Expr, FunctionBody, Value};
+
+        #[test]
+        fn test_good() {
+            let mut env = Environment::default();
+            let exprs = VecDeque::from([
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ])),
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("+".to_string()),
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ]))
+            ]);
+            let expected_value = Value::Function(FunctionBody::Closure {
+                closed_env: env.clone(),
+                params: vec!["x".to_string(), "y".to_string()],
+                body: Expr::List(LinkedList::from([
+                    Expr::Symbol("+".to_string()),
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ])),
+            });
+
+            assert_eq!(Ok(expected_value), fn_f(&mut env, exprs));
+        }
+
+        #[test]
+        fn test_wrong_num_args() {
+            let mut env = Environment::default();
+            let exprs = VecDeque::from([
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ])),
+            ]);
+
+            assert_eq!(Err(RuntimeError::FunctionApplicationWrongNumberOfArgs { expected: 2, given: 1 }),
+                       fn_f(&mut env, exprs));
+        }
+
+        #[test]
+        fn test_params_not_list() {
+            let mut env = Environment::default();
+            let exprs = VecDeque::from([
+                Expr::String("foo".to_string()),
+                Expr::Integer(2)
+            ]);
+
+            assert_eq!(Err(RuntimeError::ExpectedToBindSymbol),
+                       fn_f(&mut env, exprs));
+        }
+
+        #[test]
+        fn test_param_not_symbol() {
+            let mut env = Environment::default();
+            let exprs = VecDeque::from([
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("x".to_string()),
+                    Expr::Integer(3),
+                ])),
+                Expr::Integer(2)
+            ]);
+
+            assert_eq!(Err(RuntimeError::ExpectedToBindSymbol),
+                       fn_f(&mut env, exprs));
         }
     }
 }

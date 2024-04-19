@@ -108,6 +108,23 @@ fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &
             }
             func_pointer(env, arg_values)
         }
+        FunctionBody::Closure { closed_env, params, body } => {
+            if params.len() != arg_exprs.len() {
+                return Err(RuntimeError::FunctionApplicationWrongNumberOfArgs { expected: params.len(), given: arg_exprs.len() });
+            }
+
+            let mut arg_values = Vec::with_capacity(arg_exprs.len());
+            for arg_expr in arg_exprs {
+                arg_values.push(evaluate_expr(arg_expr, env)?);
+            }
+
+            let mut new_env = closed_env.clone();
+            for (param_name, arg_value) in params.iter().zip(arg_values) {
+                new_env.insert_symbol(param_name.to_string(), arg_value);
+            }
+
+            evaluate_expr(body, &mut new_env)
+        }
     }
 }
 
@@ -151,5 +168,27 @@ mod tests {
             Expr::Integer(2),
         ]));
         assert_eq!(Ok(Value::Integer(3)), evaluate_expr(my_expr, &mut env));
+    }
+
+    #[test]
+    fn test_apply_closure() {
+        let mut env = Environment::default();
+        let my_expr = Expr::List(LinkedList::from([
+            Expr::List(LinkedList::from([
+                Expr::Symbol("fn*".to_string()),
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ])),
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("+".to_string()),
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("y".to_string()),
+                ]))])),
+            Expr::Integer(4),
+            Expr::Integer(8),
+        ]));
+
+        assert_eq!(Ok(Value::Integer(12)), evaluate_expr(my_expr, &mut env));
     }
 }
