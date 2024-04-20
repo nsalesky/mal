@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList, VecDeque};
+use std::collections::VecDeque;
 
 use thiserror::Error;
 
@@ -70,30 +70,30 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
                     Ok(Value::Function(func_body)) => {
                         apply_function(func_body,
                                        list_expr_iter
-                                           .map(|expr| expr.clone())
+                                           .cloned()
                                            .collect(),
                                        env)
                     }
                     Ok(_) => Err(RuntimeError::CannotApplyNonFunction),
                     Err(e) => Err(e),
                 }
-                None => Ok(Value::List(LinkedList::new()))
+                None => Ok(Value::List(rpds::List::new()))
             }
         }
         Expr::Vector(v) => {
-            let mut ret_vec = Vec::with_capacity(v.len());
+            let mut ret_vec = rpds::Vector::new();
             for expr_elem in v {
-                ret_vec.push(evaluate_expr(expr_elem, env)?);
+                ret_vec.push_back_mut(evaluate_expr(expr_elem, env)?);
             }
             Ok(Value::Vector(ret_vec))
         }
         Expr::HashMap(hashmap_pairs) => {
-            let mut ret_hashmap = HashMap::new();
+            let mut ret_hashmap = rpds::HashTrieMap::new();
             for (key_expr, value_expr) in hashmap_pairs {
                 let key_value = evaluate_expr(key_expr, env)?;
                 let value_value = evaluate_expr(value_expr, env)?;
                 let key_hash: HashableValue = key_value.clone().try_into().map_err(|_| HashError(key_value))?;
-                ret_hashmap.insert(key_hash, value_value);
+                ret_hashmap.insert_mut(key_hash, value_value);
             }
 
             Ok(Value::HashMap(ret_hashmap))
@@ -133,6 +133,8 @@ fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &
 
 #[cfg(test)]
 mod tests {
+    use std::collections::LinkedList;
+
     use super::*;
 
     #[test]

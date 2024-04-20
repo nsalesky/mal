@@ -1,4 +1,4 @@
-use std::collections::{LinkedList, VecDeque};
+use std::collections::VecDeque;
 
 use crate::builtins::assert_args_length;
 use crate::Environment;
@@ -22,9 +22,9 @@ pub fn insert_functions(env: &mut Environment) {
 
 /// The builtin definition for `list`
 fn list_f(_env: &mut Environment, args: VecDeque<Value>) -> Result<Value, RuntimeError> {
-    let mut ret_list = LinkedList::new();
-    for arg in args {
-        ret_list.push_back(arg);
+    let mut ret_list = rpds::List::new();
+    for arg in args.into_iter().rev() {
+        ret_list.push_front_mut(arg);
     }
     Ok(Value::List(ret_list))
 }
@@ -44,7 +44,7 @@ fn empty_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, R
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("empty? to have an argument");
     let seq = arg.to_seq()?;
-    Ok(Value::Boolean(seq.count() == 0))
+    Ok(Value::Boolean(seq.len() == 0))
 }
 
 /// The builtin definition for `count`
@@ -52,5 +52,5 @@ fn count(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, Run
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("count to have an argument");
     let seq = arg.to_seq()?;
-    Ok(Value::Integer(seq.count() as i64))
+    Ok(Value::Integer(seq.len() as i64))
 }

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList, VecDeque};
+use std::collections::{LinkedList, VecDeque};
 
 use thiserror::Error;
 
@@ -29,16 +29,16 @@ pub enum FunctionBody {
     Closure { closed_env: Environment, params: Vec<String>, body: Expr },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Integer(i64),
     String(String),
     Symbol(String),
     Keyword(String),
     Boolean(bool),
-    List(LinkedList<Value>),
-    Vector(Vec<Value>),
-    HashMap(HashMap<HashableValue, Value>),
+    List(rpds::List<Value>),
+    Vector(rpds::Vector<Value>),
+    HashMap(rpds::HashTrieMap<HashableValue, Value>),
     Function(FunctionBody),
     Nil,
 }
@@ -69,11 +69,36 @@ impl TryInto<HashableValue> for Value {
     }
 }
 
+impl PartialEq<Value> for Value {
+    fn eq(&self, other: &Value) -> bool {
+        match (self, other) {
+            (Value::Integer(num_l), Value::Integer(num_r)) => num_l == num_r,
+            (Value::String(str_l), Value::String(str_r)) => str_l == str_r,
+            (Value::Symbol(sym_l), Value::Symbol(sym_r)) => sym_l == sym_r,
+            (Value::Keyword(kwd_l), Value::Keyword(kwd_r)) => kwd_l == kwd_r,
+            (Value::Boolean(bool_l), Value::Boolean(bool_r)) => bool_l == bool_r,
+            (Value::HashMap(map_l), Value::HashMap(map_r)) => map_l == map_r,
+            (Value::Function(func_l), Value::Function(func_r)) => func_l == func_r,
+            (Value::Nil, Value::Nil) => true,
+            _ => {
+                // Otherwise, if the types don't match, or they are lists/vectors,
+                // convert to sequence before comparing
+                let seq_lhs = self.clone().to_seq();
+                let seq_rhs = other.clone().to_seq();
+                match (seq_lhs, seq_rhs) {
+                    (Ok(seq_lhs), Ok(seq_rhs)) => seq_lhs == seq_rhs,
+                    _ => false
+                }
+            }
+        }
+    }
+}
+
 impl Value {
-    pub fn to_seq(self) -> Result<Box<dyn Iterator<Item=Value>>, RuntimeError> {
+    pub fn to_seq(self) -> Result<rpds::List<Value>, RuntimeError> {
         match self {
-            Value::List(values) => Ok(Box::new(values.into_iter())),
-            Value::Vector(values) => Ok(Box::new(values.into_iter())),
+            Value::List(values) => Ok(values),
+            Value::Vector(values) => Ok(values.into_iter().cloned().collect()),
             _ => Err(RuntimeError::IncorrectType(TypeError::NotASeq)),
         }
     }
