@@ -111,19 +111,33 @@ fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &
             }
             func_pointer(env, arg_values)
         }
-        FunctionBody::Closure { closed_env, params, body } => {
-            if params.len() != arg_exprs.len() {
+        FunctionBody::Closure { closed_env, params, variadic_param, body } => {
+            if arg_exprs.len() < params.len() || (arg_exprs.len() > params.len() && variadic_param.is_none()) {
                 return Err(RuntimeError::FunctionApplicationWrongNumberOfArgs { expected: params.len(), given: arg_exprs.len() });
             }
 
-            let mut arg_values = Vec::with_capacity(arg_exprs.len());
-            for arg_expr in arg_exprs {
-                arg_values.push(evaluate_expr(arg_expr, env)?);
+            let mut args_iter = arg_exprs.into_iter();
+
+            // Consume the named arguments
+            let mut arg_values = Vec::with_capacity(params.len());
+            for _ in 0..(params.len()) {
+                arg_values.push(evaluate_expr(
+                    args_iter.next().expect("arg to be present"),
+                    env)?);
             }
 
             let mut new_env = closed_env.clone();
             for (param_name, arg_value) in params.iter().zip(arg_values) {
                 new_env.insert_symbol(param_name.to_string(), arg_value);
+            }
+
+            // Consume the remaining arguments
+            if let Some(variadic_param_name) = variadic_param {
+                let mut variadic_values = rpds::List::new();
+                for arg_expr in args_iter.rev() {
+                    variadic_values.push_front_mut(evaluate_expr(arg_expr, env)?);
+                }
+                new_env.insert_symbol(variadic_param_name, Value::List(variadic_values));
             }
 
             evaluate_expr(body, &mut new_env)

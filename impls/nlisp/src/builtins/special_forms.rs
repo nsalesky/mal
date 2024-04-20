@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{LinkedList, VecDeque};
 
 use itertools::Itertools;
 
@@ -86,23 +86,46 @@ fn fn_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, R
     let param_list_expr = arg_exprs.pop_front().expect("parameter list to be present");
     let body_expr = arg_exprs.pop_front().expect("function body to be present");
 
-    let param_names = match param_list_expr {
-        Expr::List(elems) => {
-            let mut param_names = Vec::with_capacity(elems.len());
-            for elem in elems {
-                match elem {
-                    Expr::Symbol(param_name) => { param_names.push(param_name) }
-                    _ => return Err(RuntimeError::ExpectedToBindSymbol),
+    let param_name_exprs = {
+        match param_list_expr {
+            Expr::List(elems) => elems,
+            Expr::Vector(elems) => LinkedList::from_iter(elems),
+            _ => return Err(RuntimeError::ExpectedToBindSymbol),
+        }
+    };
+
+    let mut param_names = Vec::with_capacity(param_name_exprs.len());
+    let mut expecting_variadic = false;
+    let mut variadic_param = None;
+    for elem in param_name_exprs {
+        match elem {
+            Expr::Symbol(param_name) => {
+                if param_name == "&" {
+                    if expecting_variadic {
+                        return Err(RuntimeError::Misc); // Can't have duplicate &
+                    }
+
+                    // Consume the next param as variadic
+                    expecting_variadic = true;
+                } else if expecting_variadic && variadic_param.is_some() {
+                    return Err(RuntimeError::Misc); // Can only have one variadic param
+                } else if expecting_variadic && variadic_param.is_none() {
+                    variadic_param = Some(param_name);
+                } else {
+                    param_names.push(param_name)
                 }
             }
-            param_names
+            _ => return Err(RuntimeError::ExpectedToBindSymbol),
         }
-        _ => return Err(RuntimeError::ExpectedToBindSymbol)
-    };
+    }
+    if expecting_variadic && variadic_param.is_none() {
+        return Err(RuntimeError::Misc); // If you use &, you need to give a name to the variadic params
+    }
 
     Ok(Value::Function(FunctionBody::Closure {
         closed_env: env.clone(),
         params: param_names,
+        variadic_param,
         body: body_expr,
     }))
 }
@@ -240,6 +263,7 @@ mod tests {
             let expected_value = Value::Function(FunctionBody::Closure {
                 closed_env: env.clone(),
                 params: vec!["x".to_string(), "y".to_string()],
+                variadic_param: None,
                 body: Expr::List(LinkedList::from([
                     Expr::Symbol("+".to_string()),
                     Expr::Symbol("x".to_string()),
@@ -289,6 +313,27 @@ mod tests {
 
             assert_eq!(Err(RuntimeError::ExpectedToBindSymbol),
                        fn_f(&mut env, exprs));
+        }
+
+        #[test]
+        fn test_variadic_parameters() {
+            let mut env = Environment::default();
+            let exprs = VecDeque::from([
+                Expr::List(LinkedList::from([
+                    Expr::Symbol("x".to_string()),
+                    Expr::Symbol("&".to_string()),
+                    Expr::Symbol("rest".to_string()),
+                ])),
+                Expr::Symbol("rest".to_string()),
+            ]);
+            let expected_value = Value::Function(FunctionBody::Closure {
+                closed_env: env.clone(),
+                params: vec!["x".to_string()],
+                variadic_param: Some("rest".to_string()),
+                body: Expr::Symbol("rest".to_string()),
+            });
+
+            assert_eq!(Ok(expected_value), fn_f(&mut env, exprs));
         }
     }
 }
