@@ -3,7 +3,7 @@ use std::collections::{HashMap, LinkedList, VecDeque};
 use thiserror::Error;
 
 use crate::env::Environment;
-use crate::evaluator::RuntimeError;
+use crate::evaluator::{RuntimeError, TypeError};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
@@ -65,6 +65,16 @@ impl TryInto<HashableValue> for Value {
             Value::String(s) => Ok(HashableValue::String(s)),
             Value::Keyword(s) => Ok(HashableValue::Keyword(s)),
             _ => Err(HashValueError::UnhashableValue(self))
+        }
+    }
+}
+
+impl Value {
+    pub fn to_seq(self) -> Result<Box<dyn Iterator<Item=Value>>, RuntimeError> {
+        match self {
+            Value::List(values) => Ok(Box::new(values.into_iter())),
+            Value::Vector(values) => Ok(Box::new(values.into_iter())),
+            _ => Err(RuntimeError::IncorrectType(TypeError::NotASeq)),
         }
     }
 }

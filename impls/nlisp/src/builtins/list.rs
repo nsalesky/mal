@@ -2,7 +2,7 @@ use std::collections::{LinkedList, VecDeque};
 
 use crate::builtins::assert_args_length;
 use crate::Environment;
-use crate::evaluator::{RuntimeError, TypeError};
+use crate::evaluator::RuntimeError;
 use crate::types::{FunctionBody, Value};
 
 pub fn insert_functions(env: &mut Environment) {
@@ -43,18 +43,14 @@ fn list_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, Ru
 fn empty_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("empty? to have an argument");
-    match arg {
-        Value::List(elems) => Ok(Value::Boolean(elems.is_empty())),
-        _ => Err(RuntimeError::IncorrectType(TypeError::Misc)),
-    }
+    let seq = arg.to_seq()?;
+    Ok(Value::Boolean(seq.count() == 0))
 }
 
 /// The builtin definition for `count`
 fn count(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("count to have an argument");
-    match arg {
-        Value::List(elems) => Ok(Value::Integer(elems.len() as i64)),
-        _ => Err(RuntimeError::IncorrectType(TypeError::Misc)),
-    }
+    let seq = arg.to_seq()?;
+    Ok(Value::Integer(seq.count() as i64))
 }

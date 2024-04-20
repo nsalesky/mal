@@ -10,7 +10,10 @@ use crate::types::{Expr, FunctionBody, HashableValue, Value};
 #[derive(Error, Debug, PartialEq)]
 pub enum TypeError {
     #[error("miscellaneous type error. This should eventually be replaced with more specific errors")]
-    Misc
+    Misc,
+
+    #[error("expected a sequence, but given something that cannot be converted")]
+    NotASeq,
 }
 
 #[derive(Error, Debug, PartialEq)]
