@@ -3,9 +3,24 @@ use std::collections::VecDeque;
 use crate::builtins::assert_args_length;
 use crate::Environment;
 use crate::evaluator::{RuntimeError, TypeError};
-use crate::types::Value;
+use crate::types::{FunctionBody, Value};
 
-pub fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+pub fn insert_functions(env: &mut Environment) {
+    env.insert_symbol("+".to_string(), Value::Function(
+        FunctionBody::BuiltinValues(add)
+    ));
+    env.insert_symbol("-".to_string(), Value::Function(
+        FunctionBody::BuiltinValues(sub)
+    ));
+    env.insert_symbol("*".to_string(), Value::Function(
+        FunctionBody::BuiltinValues(mul)
+    ));
+    env.insert_symbol("/".to_string(), Value::Function(
+        FunctionBody::BuiltinValues(div)
+    ));
+}
+
+fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -19,7 +34,7 @@ pub fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
     }
 }
 
-pub fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -33,7 +48,7 @@ pub fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
     }
 }
 
-pub fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -47,7 +62,7 @@ pub fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Va
     }
 }
 
-pub fn div(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn div(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");

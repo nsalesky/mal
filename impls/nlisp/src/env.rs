@@ -2,7 +2,7 @@ use rpds::HashTrieMap;
 
 use crate::builtins;
 use crate::evaluator::RuntimeError;
-use crate::types::{FunctionBody, Value};
+use crate::types::Value;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Environment {
@@ -11,45 +11,10 @@ pub struct Environment {
 
 impl Default for Environment {
     fn default() -> Self {
-        let mut default_env = HashTrieMap::new();
-
-        default_env.insert_mut("+".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::add)
-        ));
-        default_env.insert_mut("-".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::sub)
-        ));
-        default_env.insert_mut("*".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::mul)
-        ));
-        default_env.insert_mut("/".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::div)
-        ));
-        default_env.insert_mut("def!".to_string(), Value::Function(
-            FunctionBody::BuiltinExpressions(builtins::def)
-        ));
-        default_env.insert_mut("let*".to_string(), Value::Function(
-            FunctionBody::BuiltinExpressions(builtins::let_f)
-        ));
-        default_env.insert_mut("fn*".to_string(), Value::Function(
-            FunctionBody::BuiltinExpressions(builtins::fn_f)
-        ));
-        default_env.insert_mut("list".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::list_f)
-        ));
-        default_env.insert_mut("list?".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::list_p)
-        ));
-        default_env.insert_mut("empty?".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::empty_p)
-        ));
-        default_env.insert_mut("count".to_string(), Value::Function(
-            FunctionBody::BuiltinValues(builtins::count)
-        ));
-
-        Self {
-            env: default_env
-        }
+        let inner_env = HashTrieMap::new();
+        let mut new_env = Self { env: inner_env };
+        builtins::insert_core_functions(&mut new_env);
+        new_env
     }
 }
 

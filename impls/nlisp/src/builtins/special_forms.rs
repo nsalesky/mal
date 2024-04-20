@@ -7,7 +7,19 @@ use crate::Environment;
 use crate::evaluator::{evaluate_expr, RuntimeError, TypeError};
 use crate::types::{Expr, FunctionBody, Value};
 
-pub fn def(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+pub fn insert_functions(env: &mut Environment) {
+    env.insert_symbol("def!".to_string(), Value::Function(
+        FunctionBody::BuiltinExpressions(def)
+    ));
+    env.insert_symbol("let*".to_string(), Value::Function(
+        FunctionBody::BuiltinExpressions(let_f)
+    ));
+    env.insert_symbol("fn*".to_string(), Value::Function(
+        FunctionBody::BuiltinExpressions(fn_f)
+    ));
+}
+
+fn def(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_exprs, 2)?;
 
     let expr_a = arg_exprs.pop_front().expect("id to be present");
@@ -41,7 +53,7 @@ fn create_environment_for_bindings<T>(base_env: &Environment, binding_exprs: T) 
     Ok(new_env)
 }
 
-pub fn let_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+fn let_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_exprs, 2)?;
 
     let bindings_expr = arg_exprs.pop_front().expect("binding to be present");
@@ -68,7 +80,7 @@ pub fn let_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Val
     evaluate_expr(body_expr, &mut new_env)
 }
 
-pub fn fn_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+fn fn_f(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_exprs, 2)?;
 
     let param_list_expr = arg_exprs.pop_front().expect("parameter list to be present");
@@ -205,10 +217,11 @@ mod tests {
     mod test_fn_f {
         use std::collections::{LinkedList, VecDeque};
 
-        use crate::builtins::fn_f;
         use crate::Environment;
         use crate::evaluator::RuntimeError;
         use crate::types::{Expr, FunctionBody, Value};
+
+        use super::*;
 
         #[test]
         fn test_good() {
