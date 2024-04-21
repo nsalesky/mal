@@ -9,7 +9,7 @@ pub fn insert_functions(env: &mut Environment) {
     env.insert_symbol("=".to_string(), Value::Function(
         FunctionBody::BuiltinValues(eq)
     ));
-    env.insert_symbol("<=".to_string(), Value::Function(
+    env.insert_symbol("<".to_string(), Value::Function(
         FunctionBody::BuiltinValues(lt)
     ));
     env.insert_symbol("<=".to_string(), Value::Function(
