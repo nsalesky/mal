@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::builtins::{assert_args_length, assert_args_length_at_least};
+use crate::builtins::{assert_args_length_at_least, assert_args_length_between};
 use crate::Environment;
 use crate::evaluator::{evaluate_expr, RuntimeError};
 use crate::types::{Expr, FunctionBody, Value};
@@ -15,7 +15,7 @@ pub fn insert_functions(env: &mut Environment) {
 }
 
 fn if_f(env: &mut Environment, mut args: VecDeque<Expr>) -> Result<Value, RuntimeError> {
-    assert_args_length(&args, 3)?;
+    assert_args_length_between(&args, 2, 3)?;
 
     let guard_expr = args.pop_front().expect("if to have a guard expression");
     let then_expr = args.pop_front().expect("if to have a then expression");

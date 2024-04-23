@@ -39,11 +39,6 @@ pub enum ParseError {
     InvalidExpr(String),
 }
 
-pub fn parse_text_to_expression(text: &str) -> Result<Expr, ParseError> {
-    let mut chars = text.chars().peekable();
-    parse_chars(&mut chars)
-}
-
 pub fn parse_text_to_expressions(text: &str) -> Result<Vec<Expr>, ParseError> {
     let mut chars = text.chars().peekable();
     let mut exprs = vec![];
@@ -351,6 +346,11 @@ fn parse_metadata(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse_text_to_expression(text: &str) -> Result<Expr, ParseError> {
+        let mut chars = text.chars().peekable();
+        parse_chars(&mut chars)
+    }
 
     #[test]
     fn test_parse_empty_string() {
