@@ -79,7 +79,10 @@ impl PartialEq<Value> for Value {
             (Value::Boolean(bool_l), Value::Boolean(bool_r)) => bool_l == bool_r,
             (Value::HashMap(map_l), Value::HashMap(map_r)) => map_l == map_r,
             (Value::Function(func_l), Value::Function(func_r)) => func_l == func_r,
+            // Special case: Nil is treated as a sequence for everything except equality
             (Value::Nil, Value::Nil) => true,
+            (Value::Nil, _) => false,
+            (_, Value::Nil) => false,
             _ => {
                 // Otherwise, if the types don't match, or they are lists/vectors,
                 // convert to sequence before comparing
@@ -99,7 +102,29 @@ impl Value {
         match self {
             Value::List(values) => Ok(values),
             Value::Vector(values) => Ok(values.into_iter().cloned().collect()),
+            Value::Nil => Ok(rpds::List::new()),
             _ => Err(RuntimeError::IncorrectType(TypeError::NotASeq)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_nil_equality() {
+        assert_eq!(Value::Nil, Value::Nil);
+        assert_ne!(Value::Nil, Value::List(rpds::List::new()));
+        assert_ne!(Value::Vector(rpds::Vector::new()), Value::Nil);
+    }
+
+    #[test]
+    fn test_to_seq() {
+        assert_eq!(Ok(rpds::List::new()), Value::Nil.to_seq());
+
+        let list_elems = [Value::Integer(1), Value::String("foo".to_string())];
+        assert_eq!(Ok(rpds::List::from_iter(list_elems.clone())), Value::List(rpds::List::from_iter(list_elems.clone())).to_seq());
+        assert_eq!(Ok(rpds::List::from_iter(list_elems.clone())), Value::Vector(rpds::Vector::from_iter(list_elems.clone())).to_seq());
     }
 }
