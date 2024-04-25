@@ -95,24 +95,21 @@ impl Printable for Value {
                 format!("{}", val)
             }
             Value::String(val) => {
-                let output_value = {
-                    if readable {
-                        let mut result = String::new();
+                if readable {
+                    let mut result = String::new();
 
-                        for c in val.chars() {
-                            match c {
-                                '\"' => result.push_str("\\\""),
-                                '\\' => result.push_str("\\\\"),
-                                '\n' => result.push_str("\\n"),
-                                _ => result.push(c),
-                            }
+                    for c in val.chars() {
+                        match c {
+                            '\"' => result.push_str("\\\""),
+                            '\\' => result.push_str("\\\\"),
+                            '\n' => result.push_str("\\n"),
+                            _ => result.push(c),
                         }
-                        result
-                    } else {
-                        val.to_string()
                     }
-                };
-                format!("\"{}\"", output_value)
+                    format!("\"{}\"", result)
+                } else {
+                    val.to_string()
+                }
             }
             Value::Nil => {
                 "nil".to_string()
@@ -200,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_print_string_raw() {
-        assert_eq!("\"hello\nworld\"", Value::String("hello\nworld".to_string()).print_value(false));
+        assert_eq!("hello\nworld", Value::String("hello\nworld".to_string()).print_value(false));
     }
 
     #[test]

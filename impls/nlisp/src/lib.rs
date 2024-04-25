@@ -14,7 +14,9 @@ mod evaluator;
 mod env;
 mod builtins;
 
-pub fn rep(input: &str, env: &mut Environment) -> Result<String, RuntimeError> {
+pub type Result<T> = std::result::Result<T, RuntimeError>;
+
+pub fn rep(input: &str, env: &mut Environment) -> Result<String> {
     let exprs = parse_text_to_expressions(input)?;
 
     let mut output = String::new();

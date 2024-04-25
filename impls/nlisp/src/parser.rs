@@ -292,9 +292,9 @@ fn parse_string(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
         match chars.next() {
             Some('"') => break,
             Some('\\') => match chars.next() {
-                Some('"') => string_contents.push_str("\\\""),
-                Some('n') => string_contents.push_str("\\n"),
-                Some('\\') => string_contents.push_str("\\\\"),
+                Some('"') => string_contents.push('\"'),
+                Some('n') => string_contents.push('\n'),
+                Some('\\') => string_contents.push('\\'),
                 _ => return Err(ParseError::StringInvalidBackslash),
             }
             Some(c) => string_contents.push(c),
