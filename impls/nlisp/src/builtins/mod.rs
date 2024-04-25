@@ -12,6 +12,7 @@ mod io;
 mod comparison;
 mod sequencing;
 mod string;
+mod atoms;
 
 pub fn insert_core_functions(env: &mut Environment) {
     arithmetic::insert_functions(env);
@@ -21,6 +22,7 @@ pub fn insert_core_functions(env: &mut Environment) {
     comparison::insert_functions(env);
     sequencing::insert_functions(env);
     string::insert_functions(env);
+    atoms::insert_functions(env);
 }
 
 pub fn insert_core_closures(into_env: &mut Environment, closure_env: &mut Environment) {

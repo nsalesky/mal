@@ -137,6 +137,9 @@ impl Printable for Value {
             Value::Function(_function_body) => {
                 "(fn ...)".to_string()
             }
+            Value::Atom(val_ref) => {
+                format!("(atom {})", val_ref.borrow())
+            }
         }
     }
 }

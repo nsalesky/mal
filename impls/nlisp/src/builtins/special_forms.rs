@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::{LinkedList, VecDeque};
+use std::rc::Rc;
 
 use itertools::Itertools;
 
@@ -26,11 +28,25 @@ fn def(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, Ru
 
     match expr_a {
         Expr::Symbol(id) => {
-            let expr_b = arg_exprs.pop_front().expect("assignment to be present");
-            let val_b = evaluate_expr(expr_b, env)?;
-            env.insert_symbol(id, val_b.clone());
-            // TODO: how to implement letrec style mutual recursion?
-            Ok(val_b)
+            let assignment_expr = arg_exprs.pop_front().expect("assignment to be present");
+            let assignment_ref = Rc::new(RefCell::new(Value::Nil));
+            let assignment_ref_val = Value::Atom(assignment_ref.clone());
+
+            let mut new_env = env.with_symbol(id.clone(), assignment_ref_val.clone());
+
+            // deref instead of just accessing it directly
+            let new_assignment = assignment_expr
+                .clone()
+                .subst(&id, &Expr::List(LinkedList::from([
+                    Expr::Symbol("deref".to_string()),
+                    Expr::Symbol(id.clone())
+                ])));
+
+            let closed_assignment_val = evaluate_expr(new_assignment, &mut new_env)?;
+            *assignment_ref.borrow_mut() = closed_assignment_val.clone();
+
+            env.insert_symbol(id, closed_assignment_val.clone());
+            Ok(closed_assignment_val)
         }
         _ => Err(RuntimeError::ExpectedToBindSymbol)
     }

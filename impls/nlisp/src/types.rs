@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::{LinkedList, VecDeque};
+use std::rc::Rc;
 
 use thiserror::Error;
 
@@ -40,6 +42,7 @@ pub enum Value {
     Vector(rpds::Vector<Value>),
     HashMap(rpds::HashTrieMap<HashableValue, Value>),
     Function(FunctionBody),
+    Atom(Rc<RefCell<Value>>),
     Nil,
 }
 
@@ -104,6 +107,50 @@ impl Value {
             Value::Vector(values) => Ok(values.into_iter().cloned().collect()),
             Value::Nil => Ok(rpds::List::new()),
             _ => Err(RuntimeError::IncorrectType(TypeError::NotASeq)),
+        }
+    }
+}
+
+impl Expr {
+    pub fn subst(self, target_id: &str, replace_with: &Self) -> Self {
+        match self {
+            Expr::Integer(num) => Expr::Integer(num),
+            Expr::String(str) => Expr::String(str),
+            Expr::Symbol(x) => {
+                if &x == target_id {
+                    replace_with.clone()
+                } else {
+                    Expr::Symbol(x)
+                }
+            }
+            Expr::Keyword(x) => Expr::Keyword(x),
+            Expr::Nil => Expr::Nil,
+            Expr::Boolean(bool) => Expr::Boolean(bool),
+            Expr::Quote(e) => Expr::Quote(e),
+            Expr::Quasiquote(e) => Expr::Quasiquote(e),
+            Expr::Unquote(e) => Expr::Unquote(e),
+            Expr::SpliceUnquote(e) => Expr::SpliceUnquote(e),
+            Expr::List(l) => {
+                let new_list = l
+                    .into_iter()
+                    .map(|e| e.subst(target_id, replace_with))
+                    .collect();
+                Expr::List(new_list)
+            }
+            Expr::Vector(v) => {
+                let new_vec = v
+                    .into_iter()
+                    .map(|e| e.subst(target_id, replace_with))
+                    .collect();
+                Expr::Vector(new_vec)
+            }
+            Expr::HashMap(h_vec) => {
+                let new_h_vec = h_vec
+                    .into_iter()
+                    .map(|(key, value)| (key, value.subst(target_id, replace_with)))
+                    .collect();
+                Expr::HashMap(new_h_vec)
+            }
         }
     }
 }
