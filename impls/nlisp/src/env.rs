@@ -11,9 +11,8 @@ pub struct Environment {
 
 impl Default for Environment {
     fn default() -> Self {
-        let inner_env = HashTrieMap::new();
-        let mut new_env = Self { env: inner_env };
-        builtins::insert_core_functions(&mut new_env);
+        let mut new_env = Self::with_core_functions();
+        builtins::insert_core_closures(&mut new_env, &mut Environment::with_core_functions());
         new_env
     }
 }
@@ -27,6 +26,13 @@ impl Environment {
             env.insert_symbol(symbol, binding);
         }
         env
+    }
+
+    pub fn with_core_functions() -> Self {
+        let inner_env = HashTrieMap::new();
+        let mut new_env = Self { env: inner_env };
+        builtins::insert_core_functions(&mut new_env);
+        new_env
     }
 
     pub fn lookup_symbol(&self, symbol_name: &str) -> Option<Value> {

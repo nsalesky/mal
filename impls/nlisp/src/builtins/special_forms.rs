@@ -27,13 +27,9 @@ fn def(env: &mut Environment, mut arg_exprs: VecDeque<Expr>) -> Result<Value, Ru
     match expr_a {
         Expr::Symbol(id) => {
             let expr_b = arg_exprs.pop_front().expect("assignment to be present");
-
             let val_b = evaluate_expr(expr_b, env)?;
-
             env.insert_symbol(id, val_b.clone());
-
             // TODO: how to implement letrec style mutual recursion?
-
             Ok(val_b)
         }
         _ => Err(RuntimeError::ExpectedToBindSymbol)

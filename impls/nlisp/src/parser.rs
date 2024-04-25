@@ -54,6 +54,11 @@ pub fn parse_text_to_expressions(text: &str) -> Result<Vec<Expr>, ParseError> {
     Ok(exprs)
 }
 
+pub fn parse_text_to_expression(text: &str) -> Result<Expr, ParseError> {
+    let mut chars = text.chars().peekable();
+    parse_chars(&mut chars)
+}
+
 pub fn parse_chars(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
     loop {
         match chars.peek() {
@@ -346,11 +351,6 @@ fn parse_metadata(chars: &mut Peekable<Chars>) -> Result<Expr, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn parse_text_to_expression(text: &str) -> Result<Expr, ParseError> {
-        let mut chars = text.chars().peekable();
-        parse_chars(&mut chars)
-    }
 
     #[test]
     fn test_parse_empty_string() {

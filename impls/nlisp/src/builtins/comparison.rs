@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::builtins::assert_args_length;
+use crate::builtins::{assert_args_length, run_to_closure};
 use crate::Environment;
 use crate::evaluator::{RuntimeError, TypeError};
 use crate::types::{FunctionBody, Value};
@@ -21,6 +21,10 @@ pub fn insert_functions(env: &mut Environment) {
     env.insert_symbol(">=".to_string(), Value::Function(
         FunctionBody::BuiltinValues(gte)
     ));
+}
+
+pub fn insert_core_closures(into_env: &mut Environment, closure_env: &mut Environment) {
+    into_env.insert_symbol("not".to_string(), run_to_closure("(fn* (x) (if x false true))", closure_env));
 }
 
 fn eq(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
