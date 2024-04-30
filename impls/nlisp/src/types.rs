@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use thiserror::Error;
 
-use crate::env::Environment;
+use crate::env::Env;
 use crate::evaluator::{RuntimeError, TypeError};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -26,9 +26,9 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionBody {
-    BuiltinValues(fn(&mut Environment, VecDeque<Value>) -> Result<Value, RuntimeError>),
-    BuiltinExpressions(fn(&mut Environment, VecDeque<Expr>) -> Result<Value, RuntimeError>),
-    Closure { closed_env: Environment, params: Vec<String>, variadic_param: Option<String>, body: Expr },
+    BuiltinValues(fn(&Env, VecDeque<Value>) -> Result<Value, RuntimeError>),
+    BuiltinExpressions(fn(&Env, VecDeque<Expr>) -> Result<Value, RuntimeError>),
+    Closure { closed_env: Env, params: Vec<String>, variadic_param: Option<String>, body: Expr },
 }
 
 #[derive(Debug, Clone)]
@@ -107,50 +107,6 @@ impl Value {
             Value::Vector(values) => Ok(values.into_iter().cloned().collect()),
             Value::Nil => Ok(rpds::List::new()),
             _ => Err(RuntimeError::IncorrectType(TypeError::NotASeq)),
-        }
-    }
-}
-
-impl Expr {
-    pub fn subst(self, target_id: &str, replace_with: &Self) -> Self {
-        match self {
-            Expr::Integer(num) => Expr::Integer(num),
-            Expr::String(str) => Expr::String(str),
-            Expr::Symbol(x) => {
-                if &x == target_id {
-                    replace_with.clone()
-                } else {
-                    Expr::Symbol(x)
-                }
-            }
-            Expr::Keyword(x) => Expr::Keyword(x),
-            Expr::Nil => Expr::Nil,
-            Expr::Boolean(bool) => Expr::Boolean(bool),
-            Expr::Quote(e) => Expr::Quote(e),
-            Expr::Quasiquote(e) => Expr::Quasiquote(e),
-            Expr::Unquote(e) => Expr::Unquote(e),
-            Expr::SpliceUnquote(e) => Expr::SpliceUnquote(e),
-            Expr::List(l) => {
-                let new_list = l
-                    .into_iter()
-                    .map(|e| e.subst(target_id, replace_with))
-                    .collect();
-                Expr::List(new_list)
-            }
-            Expr::Vector(v) => {
-                let new_vec = v
-                    .into_iter()
-                    .map(|e| e.subst(target_id, replace_with))
-                    .collect();
-                Expr::Vector(new_vec)
-            }
-            Expr::HashMap(h_vec) => {
-                let new_h_vec = h_vec
-                    .into_iter()
-                    .map(|(key, value)| (key, value.subst(target_id, replace_with)))
-                    .collect();
-                Expr::HashMap(new_h_vec)
-            }
         }
     }
 }

@@ -1,62 +1,78 @@
-use rpds::HashTrieMap;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::builtins;
 use crate::evaluator::RuntimeError;
 use crate::types::Value;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Environment {
-    env: HashTrieMap<String, Value>,
+pub struct EnvData {
+    map: RefCell<HashMap<String, Value>>,
+    outer: Option<Env>,
 }
 
-impl Default for Environment {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Env(Rc<EnvData>);
+
+impl Default for Env {
     fn default() -> Self {
-        let mut new_env = Self::with_core_functions();
-        builtins::insert_core_closures(&mut new_env, &mut Environment::with_core_functions());
+        let new_env = Env::with_core_functions();
+        builtins::insert_core_closures(&new_env, &Env::with_core_functions());
         new_env
     }
 }
 
-impl Environment {
-    pub fn with_values<T>(values: T) -> Self
-        where T: IntoIterator<Item=(String, Value)>
-    {
-        let mut env = Environment::default();
-        for (symbol, binding) in values {
-            env.insert_symbol(symbol, binding);
-        }
-        env
-    }
-
+impl Env {
     pub fn with_core_functions() -> Self {
-        let inner_env = HashTrieMap::new();
-        let mut new_env = Self { env: inner_env };
-        builtins::insert_core_functions(&mut new_env);
+        let map = RefCell::new(HashMap::new());
+        let new_env = Env(Rc::new(EnvData { map, outer: None }));
+        builtins::insert_core_functions(&new_env);
         new_env
     }
 
-    pub fn lookup_symbol(&self, symbol_name: &str) -> Option<Value> {
-        match self.env.get(symbol_name) {
-            Some(val) => Some(val.clone()),
-            None => None
-        }
+    pub fn with_map(map: HashMap<String, Value>) -> Self {
+        Env(Rc::new(EnvData {
+            map: RefCell::new(map),
+            outer: None,
+        }))
     }
 
-    pub fn lookup_symbol_err(&self, symbol_name: &str) -> Result<Value, RuntimeError> {
-        match self.env.get(symbol_name) {
-            Some(val) => Ok(val.clone()),
+    pub fn create_child_env(&self) -> Self {
+        Env(Rc::new(EnvData {
+            map: RefCell::new(HashMap::new()),
+            outer: Some(self.clone()),
+        }))
+    }
+
+    pub fn lookup(&self, symbol_name: &str) -> Option<Value> {
+        if let Some(val) = self.0.map.borrow().get(symbol_name) {
+            return Some(val.clone());
+        }
+
+        if let Some(outer) = &self.0.outer {
+            return outer.lookup(symbol_name);
+        }
+
+        None
+    }
+
+    pub fn lookup_err(&self, symbol_name: &str) -> Result<Value, RuntimeError> {
+        match self.lookup(symbol_name) {
+            Some(val) => Ok(val),
             None => Err(RuntimeError::UnboundSymbol(symbol_name.to_string()))
         }
     }
 
     pub fn with_symbol(&self, symbol_name: String, val: Value) -> Self {
-        Self {
-            env: self.env.insert(symbol_name, val),
-        }
+        Env(Rc::new(EnvData {
+            outer: Some(self.clone()),
+            map: RefCell::new(HashMap::from([(symbol_name, val)])),
+        }))
     }
 
-    pub fn insert_symbol(&mut self, symbol_name: String, val: Value) {
-        self.env.insert_mut(symbol_name, val);
+    pub fn insert(&self, symbol_name: String, val: Value) {
+        self.0.map.borrow_mut().insert(symbol_name, val);
     }
 }
 
@@ -66,47 +82,46 @@ mod tests {
 
     #[test]
     fn test_lookup_symbol() {
-        let mut inner_env = HashTrieMap::new();
-        inner_env.insert_mut("foo".to_string(), Value::Integer(4));
+        let mut map = HashMap::new();
+        map.insert("foo".to_string(), Value::Integer(4));
 
-        let env = Environment { env: inner_env };
-        assert_eq!(Some(Value::Integer(4)), env.lookup_symbol("foo"));
-        assert_eq!(None, env.lookup_symbol("bar"));
+        let env = Env::with_map(map);
+        assert_eq!(Some(Value::Integer(4)), env.lookup("foo"));
+        assert_eq!(None, env.lookup("bar"));
     }
 
     #[test]
     fn test_lookup_symbol_err() {
-        let mut inner_env = HashTrieMap::new();
-        inner_env.insert_mut("foo".to_string(), Value::Integer(4));
+        let mut map = HashMap::new();
+        map.insert("foo".to_string(), Value::Integer(4));
 
-        let env = Environment { env: inner_env };
-        assert_eq!(Ok(Value::Integer(4)), env.lookup_symbol_err("foo"));
-        assert_eq!(Err(RuntimeError::UnboundSymbol("bar".to_string())), env.lookup_symbol_err("bar"));
+        let env = Env::with_map(map);
+        assert_eq!(Ok(Value::Integer(4)), env.lookup_err("foo"));
+        assert_eq!(Err(RuntimeError::UnboundSymbol("bar".to_string())), env.lookup_err("bar"));
     }
 
     #[test]
     fn test_with_symbol() {
-        let env = Environment::default();
-        assert_eq!(None, env.lookup_symbol("foo"));
+        let env = Env::default();
+        assert_eq!(None, env.lookup("foo"));
         let new_env = env.with_symbol("foo".to_string(), Value::String("hello".to_string()));
-        assert_eq!(Some(Value::String("hello".to_string())), new_env.lookup_symbol("foo"));
+        assert_eq!(Some(Value::String("hello".to_string())), new_env.lookup("foo"));
     }
 
     #[test]
     fn test_insert_symbol() {
-        let mut env = Environment::default();
-        assert_eq!(None, env.lookup_symbol("foo"));
-        env.insert_symbol("foo".to_string(), Value::String("hello".to_string()));
-        assert_eq!(Some(Value::String("hello".to_string())), env.lookup_symbol("foo"));
+        let env = Env::default();
+        assert_eq!(None, env.lookup("foo"));
+        env.insert("foo".to_string(), Value::String("hello".to_string()));
+        assert_eq!(Some(Value::String("hello".to_string())), env.lookup("foo"));
     }
 
     #[test]
     fn test_with_values() {
-        let env = Environment::with_values(vec![
-            ("foo".to_string(), Value::Symbol("hello".to_string())),
-            ("bar".to_string(), Value::Integer(0)),
-        ]);
-        assert_eq!(Some(Value::Symbol("hello".to_string())), env.lookup_symbol("foo"));
-        assert_eq!(Some(Value::Integer(0)), env.lookup_symbol("bar"));
+        let env = Env::with_map(HashMap::new());
+        env.insert("foo".to_string(), Value::Symbol("hello".to_string()));
+        env.insert("bar".to_string(), Value::Integer(0));
+        assert_eq!(Some(Value::Symbol("hello".to_string())), env.lookup("foo"));
+        assert_eq!(Some(Value::Integer(0)), env.lookup("bar"));
     }
 }

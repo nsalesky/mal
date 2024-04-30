@@ -1,26 +1,26 @@
 use std::collections::VecDeque;
 
 use crate::builtins::assert_args_length;
-use crate::Environment;
+use crate::Env;
 use crate::evaluator::{RuntimeError, TypeError};
 use crate::types::{FunctionBody, Value};
 
-pub fn insert_functions(env: &mut Environment) {
-    env.insert_symbol("+".to_string(), Value::Function(
+pub fn insert_functions(env: &Env) {
+    env.insert("+".to_string(), Value::Function(
         FunctionBody::BuiltinValues(add)
     ));
-    env.insert_symbol("-".to_string(), Value::Function(
+    env.insert("-".to_string(), Value::Function(
         FunctionBody::BuiltinValues(sub)
     ));
-    env.insert_symbol("*".to_string(), Value::Function(
+    env.insert("*".to_string(), Value::Function(
         FunctionBody::BuiltinValues(mul)
     ));
-    env.insert_symbol("/".to_string(), Value::Function(
+    env.insert("/".to_string(), Value::Function(
         FunctionBody::BuiltinValues(div)
     ));
 }
 
-fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn add(_env: &Env, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -34,7 +34,7 @@ fn add(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value,
     }
 }
 
-fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn sub(_env: &Env, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -48,7 +48,7 @@ fn sub(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value,
     }
 }
 
-fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn mul(_env: &Env, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -62,7 +62,7 @@ fn mul(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value,
     }
 }
 
-fn div(_env: &mut Environment, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn div(_env: &Env, mut arg_values: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&arg_values, 2)?;
 
     let val_a = arg_values.pop_front().expect("val_a to be present");
@@ -83,7 +83,7 @@ mod tests {
     mod test_add {
         use std::collections::VecDeque;
 
-        use crate::env::Environment;
+        use crate::env::Env;
         use crate::evaluator::RuntimeError;
         use crate::types::Value;
 
@@ -91,31 +91,31 @@ mod tests {
 
         #[test]
         fn test_good() {
-            let mut env = Environment::default();
+            let env = Env::default();
             let values = VecDeque::from([
                 Value::Integer(1),
                 Value::Integer(2)
             ]);
-            assert_eq!(Ok(Value::Integer(3)), add(&mut env, values));
+            assert_eq!(Ok(Value::Integer(3)), add(&env, values));
         }
 
         #[test]
         fn test_wrong_num_args() {
-            let mut env = Environment::default();
+            let env = Env::default();
             let values = VecDeque::from([
                 Value::Integer(1),
             ]);
-            assert_eq!(Err(RuntimeError::FunctionApplicationWrongNumberOfArgs { expected: 2, given: 1 }), add(&mut env, values));
+            assert_eq!(Err(RuntimeError::FunctionApplicationWrongNumberOfArgs { expected: 2, given: 1 }), add(&env, values));
         }
 
         #[test]
         fn test_wrong_types() {
-            let mut env = Environment::default();
+            let env = Env::default();
             let values = VecDeque::from([
                 Value::Integer(1),
                 Value::Symbol("foo".to_string())
             ]);
-            assert_eq!(Err(RuntimeError::IncorrectType(TypeError::Misc)), add(&mut env, values));
+            assert_eq!(Err(RuntimeError::IncorrectType(TypeError::Misc)), add(&env, values));
         }
     }
 }

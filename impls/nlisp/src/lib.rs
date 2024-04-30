@@ -2,7 +2,7 @@ extern crate core;
 
 use std::fmt::Write;
 
-pub use env::Environment;
+pub use env::Env;
 
 use crate::evaluator::{evaluate_expr, RuntimeError};
 use crate::parser::parse_text_to_expressions;
@@ -16,7 +16,7 @@ mod builtins;
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
 
-pub fn rep(input: &str, env: &mut Environment) -> Result<String> {
+pub fn rep(input: &str, env: &Env) -> Result<String> {
     let exprs = parse_text_to_expressions(input)?;
 
     let mut output = String::new();

@@ -1,27 +1,27 @@
 use std::collections::VecDeque;
 
 use crate::builtins::assert_args_length;
-use crate::Environment;
+use crate::Env;
 use crate::evaluator::RuntimeError;
 use crate::types::{FunctionBody, Value};
 
-pub fn insert_functions(env: &mut Environment) {
-    env.insert_symbol("list".to_string(), Value::Function(
+pub fn insert_functions(env: &Env) {
+    env.insert("list".to_string(), Value::Function(
         FunctionBody::BuiltinValues(list_f)
     ));
-    env.insert_symbol("list?".to_string(), Value::Function(
+    env.insert("list?".to_string(), Value::Function(
         FunctionBody::BuiltinValues(list_p)
     ));
-    env.insert_symbol("empty?".to_string(), Value::Function(
+    env.insert("empty?".to_string(), Value::Function(
         FunctionBody::BuiltinValues(empty_p)
     ));
-    env.insert_symbol("count".to_string(), Value::Function(
+    env.insert("count".to_string(), Value::Function(
         FunctionBody::BuiltinValues(count)
     ));
 }
 
 /// The builtin definition for `list`
-fn list_f(_env: &mut Environment, args: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn list_f(_env: &Env, args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     let mut ret_list = rpds::List::new();
     for arg in args.into_iter().rev() {
         ret_list.push_front_mut(arg);
@@ -30,7 +30,7 @@ fn list_f(_env: &mut Environment, args: VecDeque<Value>) -> Result<Value, Runtim
 }
 
 /// The builtin definition for `list?`
-fn list_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn list_p(_env: &Env, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("list? to have an argument");
     match arg {
@@ -40,7 +40,7 @@ fn list_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, Ru
 }
 
 /// The builtin definition for `empty?`
-fn empty_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn empty_p(_env: &Env, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("empty? to have an argument");
     let seq = arg.to_seq()?;
@@ -48,7 +48,7 @@ fn empty_p(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, R
 }
 
 /// The builtin definition for `count`
-fn count(_env: &mut Environment, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
+fn count(_env: &Env, mut args: VecDeque<Value>) -> Result<Value, RuntimeError> {
     assert_args_length(&args, 1)?;
     let arg = args.pop_front().expect("count to have an argument");
     let seq = arg.to_seq()?;

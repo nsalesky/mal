@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use thiserror::Error;
 
-use crate::env::Environment;
+use crate::env::Env;
 use crate::evaluator::RuntimeError::HashError;
 use crate::parser::ParseError;
 use crate::types::{Expr, FunctionBody, HashableValue, Value};
@@ -46,13 +46,13 @@ pub enum RuntimeError {
     Misc,
 }
 
-pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, RuntimeError> {
+pub fn evaluate_expr(expr: Expr, env: &Env) -> Result<Value, RuntimeError> {
     match expr {
         Expr::Integer(num) => Ok(Value::Integer(num)),
         Expr::String(s) => Ok(Value::String(s)),
         Expr::Keyword(s) => Ok(Value::Keyword(s)),
         Expr::Symbol(s) => {
-            match env.lookup_symbol(s.as_str()) {
+            match env.lookup(s.as_str()) {
                 Some(val) => Ok(val),
                 None => Err(RuntimeError::UnboundSymbol(s)),
             }
@@ -101,7 +101,7 @@ pub fn evaluate_expr(expr: Expr, env: &mut Environment) -> Result<Value, Runtime
     }
 }
 
-fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &mut Environment) -> Result<Value, RuntimeError> {
+fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &Env) -> Result<Value, RuntimeError> {
     match function_body {
         FunctionBody::BuiltinExpressions(func_pointer) => func_pointer(env, arg_exprs),
         FunctionBody::BuiltinValues(func_pointer) => {
@@ -126,9 +126,9 @@ fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &
                     env)?);
             }
 
-            let mut new_env = closed_env.clone();
+            let new_env = closed_env.create_child_env();
             for (param_name, arg_value) in params.iter().zip(arg_values) {
-                new_env.insert_symbol(param_name.to_string(), arg_value);
+                new_env.insert(param_name.to_string(), arg_value);
             }
 
             // Consume the remaining arguments
@@ -137,10 +137,10 @@ fn apply_function(function_body: FunctionBody, arg_exprs: VecDeque<Expr>, env: &
                 for arg_expr in args_iter.rev() {
                     variadic_values.push_front_mut(evaluate_expr(arg_expr, env)?);
                 }
-                new_env.insert_symbol(variadic_param_name, Value::List(variadic_values));
+                new_env.insert(variadic_param_name, Value::List(variadic_values));
             }
 
-            evaluate_expr(body, &mut new_env)
+            evaluate_expr(body, &new_env)
         }
     }
 }
@@ -153,45 +153,45 @@ mod tests {
 
     #[test]
     fn test_evaluate_integer() {
-        let mut env = Environment::default();
-        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(Expr::Integer(3), &mut env));
+        let env = Env::default();
+        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(Expr::Integer(3), &env));
     }
 
     #[test]
     fn test_evaluate_string() {
-        let mut env = Environment::default();
-        assert_eq!(Ok(Value::String("hello".to_string())), evaluate_expr(Expr::String("hello".to_string()), &mut env));
+        let env = Env::default();
+        assert_eq!(Ok(Value::String("hello".to_string())), evaluate_expr(Expr::String("hello".to_string()), &env));
     }
 
     #[test]
     fn test_evaluate_boolean() {
-        let mut env = Environment::default();
-        assert_eq!(Ok(Value::Boolean(true)), evaluate_expr(Expr::Boolean(true), &mut env));
-        assert_eq!(Ok(Value::Boolean(false)), evaluate_expr(Expr::Boolean(false), &mut env));
+        let env = Env::default();
+        assert_eq!(Ok(Value::Boolean(true)), evaluate_expr(Expr::Boolean(true), &env));
+        assert_eq!(Ok(Value::Boolean(false)), evaluate_expr(Expr::Boolean(false), &env));
     }
 
     #[test]
     fn test_evaluate_symbol() {
-        let mut env = Environment::default();
-        assert_eq!(Err(RuntimeError::UnboundSymbol("foo".to_string())), evaluate_expr(Expr::Symbol("foo".to_string()), &mut env));
-        env.insert_symbol("foo".to_string(), Value::Integer(3));
-        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(Expr::Symbol("foo".to_string()), &mut env));
+        let env = Env::default();
+        assert_eq!(Err(RuntimeError::UnboundSymbol("foo".to_string())), evaluate_expr(Expr::Symbol("foo".to_string()), &env));
+        env.insert("foo".to_string(), Value::Integer(3));
+        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(Expr::Symbol("foo".to_string()), &env));
     }
 
     #[test]
     fn test_apply_builtin_function() {
-        let mut env = Environment::default();
+        let env = Env::default();
         let my_expr = Expr::List(LinkedList::from([
             Expr::Symbol("+".to_string()),
             Expr::Integer(1),
             Expr::Integer(2),
         ]));
-        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(my_expr, &mut env));
+        assert_eq!(Ok(Value::Integer(3)), evaluate_expr(my_expr, &env));
     }
 
     #[test]
     fn test_apply_closure() {
-        let mut env = Environment::default();
+        let env = Env::default();
         let my_expr = Expr::List(LinkedList::from([
             Expr::List(LinkedList::from([
                 Expr::Symbol("fn*".to_string()),
@@ -208,6 +208,6 @@ mod tests {
             Expr::Integer(8),
         ]));
 
-        assert_eq!(Ok(Value::Integer(12)), evaluate_expr(my_expr, &mut env));
+        assert_eq!(Ok(Value::Integer(12)), evaluate_expr(my_expr, &env));
     }
 }

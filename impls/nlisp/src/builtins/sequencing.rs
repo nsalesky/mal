@@ -1,20 +1,20 @@
 use std::collections::VecDeque;
 
 use crate::builtins::{assert_args_length_at_least, assert_args_length_between};
-use crate::Environment;
+use crate::Env;
 use crate::evaluator::{evaluate_expr, RuntimeError};
 use crate::types::{Expr, FunctionBody, Value};
 
-pub fn insert_functions(env: &mut Environment) {
-    env.insert_symbol("if".to_string(), Value::Function(
+pub fn insert_functions(env: &Env) {
+    env.insert("if".to_string(), Value::Function(
         FunctionBody::BuiltinExpressions(if_f)
     ));
-    env.insert_symbol("do".to_string(), Value::Function(
+    env.insert("do".to_string(), Value::Function(
         FunctionBody::BuiltinExpressions(do_f)
     ));
 }
 
-fn if_f(env: &mut Environment, mut args: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+fn if_f(env: &Env, mut args: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     assert_args_length_between(&args, 2, 3)?;
 
     let guard_expr = args.pop_front().expect("if to have a guard expression");
@@ -36,7 +36,7 @@ fn if_f(env: &mut Environment, mut args: VecDeque<Expr>) -> Result<Value, Runtim
     }
 }
 
-fn do_f(env: &mut Environment, args: VecDeque<Expr>) -> Result<Value, RuntimeError> {
+fn do_f(env: &Env, args: VecDeque<Expr>) -> Result<Value, RuntimeError> {
     // NOTE: I technically could have just taken args as values, but I wanted to make sure they get executed in the right order
     // if I change the way I bind arguments
     assert_args_length_at_least(&args, 1)?;
